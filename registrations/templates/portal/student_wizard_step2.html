@@ -1,0 +1,71 @@
+{% extends "portal/layout.html" %}
+{% block title %}Student Wizard | Step 2{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Student Wizard</h2>
+      <div class="text-muted mt-1">Step 2 of 3 — Guardian details</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+
+    <ul class="steps steps-blue steps-counter mb-4">
+      <li class="step-item done">Student</li>
+      <li class="step-item active">Guardian</li>
+      <li class="step-item">Review</li>
+    </ul>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <label class="form-label">{{ form.guardian_name.label }}</label>
+          {{ form.guardian_name }}
+          {% if form.guardian_name.errors %}<div class="invalid-feedback d-block">{{ form.guardian_name.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label class="form-label">{{ form.guardian_phone.label }}</label>
+          {{ form.guardian_phone }}
+          {% if form.guardian_phone.errors %}<div class="invalid-feedback d-block">{{ form.guardian_phone.errors|striptags }}</div>{% endif %}
+          <div class="form-hint">Format: +9665XXXXXXXX</div>
+        </div>
+
+        <div class="col-12 col-md-6">
+          <label class="form-label">{{ form.guardian_email.label }}</label>
+          {{ form.guardian_email }}
+          {% if form.guardian_email.errors %}<div class="invalid-feedback d-block">{{ form.guardian_email.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">{{ form.notes.label }}</label>
+          {{ form.notes }}
+          {% if form.notes.errors %}<div class="invalid-feedback d-block">{{ form.notes.errors|striptags }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <a class="btn btn-outline-secondary"
+           href="{% if pk %}{% url 'portal_student_wizard_step1_edit' pk %}{% else %}{% url 'portal_student_wizard_step1' %}{% endif %}">
+          Back
+        </a>
+        <button class="btn btn-primary" type="submit">Next</button>
+        <a class="btn btn-outline-secondary"
+           href="{% if pk %}{% url 'portal_student_wizard_cancel_edit' pk %}{% else %}{% url 'portal_student_wizard_cancel' %}{% endif %}">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

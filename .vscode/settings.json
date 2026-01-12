@@ -1,0 +1,5 @@
+{
+  "python.defaultInterpreterPath": "C:\\UCMAS\\venv\\Scripts\\python.exe",
+  "python.analysis.extraPaths": ["./"],
+  "python.analysis.typeCheckingMode": "basic"
+}

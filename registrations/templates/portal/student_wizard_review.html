@@ -1,0 +1,91 @@
+{% extends "portal/layout.html" %}
+{% block title %}Student Wizard | Review{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Student Wizard</h2>
+      <div class="text-muted mt-1">Step 3 of 3 — Review & confirm</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+
+    <ul class="steps steps-blue steps-counter mb-4">
+      <li class="step-item done">Student</li>
+      <li class="step-item done">Guardian</li>
+      <li class="step-item active">Review</li>
+    </ul>
+
+    <div class="row g-3">
+
+      <div class="col-12 col-md-6">
+        <div class="card card-sm">
+          <div class="card-body">
+            <div class="fw-bold mb-2">Student</div>
+            <div class="text-muted">Event</div>
+            <div>{{ event.code }} — {{ event.name }}</div>
+            <div class="mt-2 text-muted">Level</div>
+            <div>{{ wiz.level|default:"—" }}</div>
+
+            <div class="mt-2 text-muted">Name (EN)</div>
+            <div>{{ wiz.first_name_en }} {{ wiz.last_name_en }}</div>
+
+            <div class="mt-2 text-muted">Name (AR)</div>
+            <div>{{ wiz.first_name_ar|default:"—" }} {{ wiz.last_name_ar|default:"" }}</div>
+
+            <div class="mt-2 text-muted">DOB / Gender</div>
+            <div>{{ wiz.date_of_birth }} / {{ wiz.gender }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <div class="card card-sm">
+          <div class="card-body">
+            <div class="fw-bold mb-2">Guardian</div>
+
+            <div class="text-muted">Name</div>
+            <div>{{ wiz.guardian_name }}</div>
+
+            <div class="mt-2 text-muted">Phone</div>
+            <div>{{ wiz.guardian_phone }}</div>
+
+            <div class="mt-2 text-muted">Email</div>
+            <div>{{ wiz.guardian_email|default:"—" }}</div>
+
+            <div class="mt-2 text-muted">Notes</div>
+            <div>{{ wiz.notes|default:"—" }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary"
+           href="{% if pk %}{% url 'portal_student_wizard_step2_edit' pk %}{% else %}{% url 'portal_student_wizard_step2' %}{% endif %}">
+          Back
+        </a>
+        <button class="btn btn-success" type="submit">
+          Save Draft
+        </button>
+        <a class="btn btn-outline-secondary"
+           href="{% if pk %}{% url 'portal_student_wizard_cancel_edit' pk %}{% else %}{% url 'portal_student_wizard_cancel' %}{% endif %}">
+          Cancel
+        </a>
+      </div>
+
+      <div class="alert alert-info mt-3 mb-0">
+        This will save the student as <strong>DRAFT</strong>. You can submit later from the Submit page.
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

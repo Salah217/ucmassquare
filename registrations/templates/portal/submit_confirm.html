@@ -1,0 +1,93 @@
+{% extends "portal/layout.html" %}
+{% block title %}Confirm Submission | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Confirm Submission</h2>
+      <div class="text-muted mt-1">Review before final submission.</div>
+    </div>
+  </div>
+</div>
+
+<div class="row row-cards">
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Submission Details</h3>
+      </div>
+      <div class="card-body">
+        <dl class="row">
+          <dt class="col-5">Event</dt>
+          <dd class="col-7">
+            <span class="badge bg-blue-lt">{{ event.code }}</span>
+            <span class="ms-2">{{ event.name }}</span>
+          </dd>
+
+          <dt class="col-5">Deadline</dt>
+          <dd class="col-7">{{ event.deadline|default:"-" }}</dd>
+
+          <dt class="col-5">Draft students to submit</dt>
+          <dd class="col-7"><span class="badge bg-warning-lt">{{ draft_count }}</span></dd>
+        </dl>
+
+        {% if draft_count == 0 %}
+          <div class="alert alert-warning mb-0">
+            No Draft students found for this event.
+          </div>
+        {% else %}
+          <div class="alert alert-danger">
+            <strong>Warning:</strong> This action will submit all Draft students for this event and lock them from editing.
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="card-footer d-flex justify-content-between">
+        <a href="{% url 'portal_submit' %}" class="btn btn-outline-secondary">Back</a>
+
+        {% if draft_count > 0 %}
+          <form method="post" action="{% url 'portal_submit_confirm' %}">
+            {% csrf_token %}
+            <input type="hidden" name="event_code" value="{{ event.code }}">
+            <input type="hidden" name="final" value="1">
+            <button type="submit" class="btn btn-danger">
+              Confirm & Submit
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Sample Draft Students (latest 10)</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>Reg No</th>
+              <th>Student</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in sample_students %}
+              <tr>
+                <td class="text-muted">{{ s.sa_registration_no|default:"—" }}</td>
+                <td>{{ s.first_name_en }} {{ s.last_name_en }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted py-3">No draft students.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

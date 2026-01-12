@@ -1,0 +1,46 @@
+{% extends "portal/layout.html" %}
+{% block title %}Submit Students | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Submit Students</h2>
+      <div class="text-muted mt-1">Only Organization Managers can submit Draft students.</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Select Event</h3>
+  </div>
+  <div class="card-body">
+    <form method="post" action="{% url 'portal_submit_confirm' %}" class="row g-3">
+      {% csrf_token %}
+
+      <div class="col-12 col-md-8">
+        <label class="form-label">Open Event</label>
+        <select name="event_code" class="form-select" required>
+          <option value="">-- Select an OPEN event --</option>
+          {% for ev in open_events %}
+            <option value="{{ ev.code }}">{{ ev.code }} — {{ ev.name }}{% if ev.deadline %} (Deadline: {{ ev.deadline }}){% endif %}</option>
+          {% endfor %}
+        </select>
+        <div class="form-hint">Submission is per event. Only Draft students linked to this event will be submitted.</div>
+      </div>
+
+      <div class="col-12 col-md-4 d-flex align-items-end">
+        <button class="btn btn-primary w-100" type="submit">
+          Continue to confirmation
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="alert alert-warning mt-3">
+  <strong>Important:</strong> After submission, students are locked for editing. If you need changes later, contact UCMAS Saudi Admin.
+</div>
+{% endblock %}

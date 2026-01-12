@@ -1,0 +1,227 @@
+{% extends "portal/layout.html" %}
+{% block title %}Students | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Students</h2>
+      <div class="text-muted mt-1">Search, filter, and manage student records.</div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <a href="{% url 'portal_student_add' %}" class="btn btn-primary">
+        Add Student
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+
+      <div class="col-12 col-md-4">
+        <label class="form-label">Search</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="Reg no, student name, guardian phone...">
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="" {% if not selected_status %}selected{% endif %}>All</option>
+          <option value="DRAFT" {% if selected_status == "DRAFT" %}selected{% endif %}>Draft</option>
+          <option value="SUBMITTED" {% if selected_status == "SUBMITTED" %}selected{% endif %}>Submitted</option>
+          <option value="ACCEPTED" {% if selected_status == "ACCEPTED" %}selected{% endif %}>Accepted</option>
+          <option value="REJECTED" {% if selected_status == "REJECTED" %}selected{% endif %}>Rejected</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Event</label>
+        <select name="event" class="form-select">
+          <option value="" {% if not selected_event %}selected{% endif %}>All</option>
+          {% for ev in open_events %}
+            <option value="{{ ev.code }}" {% if selected_event == ev.code %}selected{% endif %}>
+              {{ ev.code }} — {{ ev.name }}
+            </option>
+          {% endfor %}
+        </select>
+        <div class="form-hint">Shows OPEN events only.</div>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex gap-2">
+        <button class="btn btn-primary w-100" type="submit">Apply</button>
+        <a class="btn btn-outline-secondary w-100" href="{% url 'portal_student_list' %}">Reset</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <h3 class="card-title mb-0">Student List</h3>
+
+    {% if is_manager %}
+      <div class="d-flex gap-2">
+        <span class="text-muted small">
+          {% if selected_event %}
+            Bulk submit works for selected event: <strong>{{ selected_event }}</strong>
+          {% else %}
+            <strong>Select an Event</strong> to enable bulk submit
+          {% endif %}
+        </span>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card-body p-0">
+    {% if students %}
+      <form method="post" action="{% url 'portal_submit_selected_confirm' %}">
+        {% csrf_token %}
+        <input type="hidden" name="event_code" value="{{ selected_event }}">
+
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table">
+            <thead>
+              <tr>
+                <th class="w-1">
+                  {% if is_manager and selected_event %}
+                    <input class="form-check-input m-0 align-middle" type="checkbox" id="check-all">
+                  {% endif %}
+                </th>
+                <th>Registration No</th>
+                <th>Student</th>
+                <th>Event</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th class="w-1"></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for s in students %}
+                <tr>
+                  <td>
+                    {% if is_manager and selected_event and s.status == "DRAFT" and s.event and s.event.code == selected_event %}
+                      <input class="form-check-input row-check" type="checkbox" name="selected_ids" value="{{ s.id }}">
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="text-muted">{{ s.sa_registration_no|default:"—" }}</td>
+
+                  <td>
+                    <div class="fw-bold">{{ s.first_name_en }} {{ s.last_name_en }}</div>
+                    <div class="text-muted small">Guardian: {{ s.guardian_name }} · {{ s.guardian_phone }}</div>
+                  </td>
+
+                  <td>
+                    {% if s.event %}
+                      <span class="badge bg-blue-lt">{{ s.event.code }}</span>
+                      <span class="text-muted ms-1">{{ s.event.name }}</span>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if s.status == "DRAFT" %}
+                      <span class="badge bg-secondary-lt">DRAFT</span>
+                    {% elif s.status == "SUBMITTED" %}
+                      <span class="badge bg-azure-lt">SUBMITTED</span>
+                    {% elif s.status == "ACCEPTED" %}
+                      <span class="badge bg-green-lt">ACCEPTED</span>
+                    {% elif s.status == "REJECTED" %}
+                      <span class="badge bg-red-lt">REJECTED</span>
+                    {% else %}
+                      <span class="badge bg-muted-lt">{{ s.status }}</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="text-muted">{{ s.created_at|date:"Y-m-d H:i" }}</td>
+
+                  <td class="text-end">
+                    {% if s.status == "DRAFT" %}
+                      <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_student_edit' s.pk %}">Edit</a>
+                    {% else %}
+                      <span class="text-muted small">Locked</span>
+                    {% endif %}
+                  </td>
+                </tr>
+
+                {% if s.status == "REJECTED" and s.rejection_reason %}
+                  <tr class="bg-red-lt">
+                    <td colspan="7" class="text-muted">
+                      <strong>Rejection reason:</strong> {{ s.rejection_reason }}
+                    </td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if is_manager %}
+          <div class="p-3 d-flex justify-content-between align-items-center border-top">
+            <div class="text-muted small">
+              Tip: filter by <strong>Event</strong> then select Draft students to submit.
+            </div>
+
+            {% if selected_event %}
+              <button type="submit" class="btn btn-danger">
+                Submit selected Draft students
+              </button>
+            {% else %}
+              <button type="button" class="btn btn-danger" disabled>
+                Submit selected Draft students
+              </button>
+            {% endif %}
+          </div>
+        {% endif %}
+      </form>
+
+      {# Pagination #}
+      <div class="p-3 border-top">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="text-muted small">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} · Total {{ page_obj.paginator.count }}
+          </div>
+
+          <div class="btn-group">
+            {% if page_obj.has_previous %}
+              <a class="btn btn-outline-secondary btn-sm"
+                 href="?page={{ page_obj.previous_page_number }}&q={{ q }}&status={{ selected_status }}&event={{ selected_event }}">Previous</a>
+            {% else %}
+              <button class="btn btn-outline-secondary btn-sm" disabled>Previous</button>
+            {% endif %}
+
+            {% if page_obj.has_next %}
+              <a class="btn btn-outline-secondary btn-sm"
+                 href="?page={{ page_obj.next_page_number }}&q={{ q }}&status={{ selected_status }}&event={{ selected_event }}">Next</a>
+            {% else %}
+              <button class="btn btn-outline-secondary btn-sm" disabled>Next</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <script>
+        const checkAll = document.getElementById("check-all");
+        if (checkAll) {
+          checkAll.addEventListener("change", function () {
+            document.querySelectorAll(".row-check").forEach(cb => cb.checked = checkAll.checked);
+          });
+        }
+      </script>
+
+    {% else %}
+      <div class="p-4">
+        <div class="text-muted">No students found for your current filters.</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

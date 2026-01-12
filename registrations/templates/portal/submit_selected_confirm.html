@@ -1,0 +1,60 @@
+{% extends "portal/layout.html" %}
+{% block title %}Confirm Selected Submission | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Confirm Submission</h2>
+      <div class="text-muted mt-1">Submit selected Draft students for the event below.</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Event</h3>
+  </div>
+  <div class="card-body">
+    <span class="badge bg-blue-lt">{{ event.code }}</span>
+    <span class="ms-2">{{ event.name }}</span>
+    <div class="text-muted mt-2">Selected Draft students: <strong>{{ draft_count }}</strong></div>
+
+    <div class="alert alert-danger mt-3">
+      <strong>Warning:</strong> After submission, students are locked from editing.
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Reg No</th>
+          <th>Student</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+          <tr>
+            <td class="text-muted">{{ s.sa_registration_no }}</td>
+            <td>{{ s.first_name_en }} {{ s.last_name_en }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-footer d-flex justify-content-between">
+    <a href="{% url 'portal_student_list' %}?event={{ event.code }}&status=DRAFT" class="btn btn-outline-secondary">Back</a>
+
+    <form method="post" action="{% url 'portal_submit_selected_final' %}">
+      {% csrf_token %}
+      <input type="hidden" name="event_code" value="{{ event.code }}">
+      {% for sid in selected_ids %}
+        <input type="hidden" name="selected_ids" value="{{ sid }}">
+      {% endfor %}
+      <button type="submit" class="btn btn-danger">Confirm & Submit</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

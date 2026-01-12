@@ -1,0 +1,173 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Dashboard | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Dashboard</h2>
+      <div class="text-muted mt-1">
+        Welcome, {{ request.user.username }}{% if org_name %} · {{ org_name }}{% endif %}
+      </div>
+    </div>
+    <div class="col-auto ms-auto d-print-none">
+      <a href="{% url 'portal_student_add' %}" class="btn btn-primary">
+        Add Student
+      </a>
+    </div>
+  </div>
+</div>
+
+{# ✅ KPI Cards (CLICKABLE) #}
+<div class="row row-deck row-cards">
+
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'portal_student_list' %}?status=DRAFT" class="card text-decoration-none">
+      <div class="card-body">
+        <div class="subheader">Draft</div>
+        <div class="h1 mb-0">{{ draft_count }}</div>
+        <div class="text-muted mt-2">Students not submitted yet</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'portal_student_list' %}?status=SUBMITTED" class="card text-decoration-none">
+      <div class="card-body">
+        <div class="subheader">Submitted</div>
+        <div class="h1 mb-0">{{ submitted_count }}</div>
+        <div class="text-muted mt-2">Waiting review</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'portal_student_list' %}?status=ACCEPTED" class="card text-decoration-none">
+      <div class="card-body">
+        <div class="subheader">Accepted</div>
+        <div class="h1 mb-0">{{ accepted_count }}</div>
+        <div class="text-muted mt-2">Approved registrations</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <a href="{% url 'portal_student_list' %}?status=REJECTED" class="card text-decoration-none">
+      <div class="card-body">
+        <div class="subheader">Rejected</div>
+        <div class="h1 mb-0">{{ rejected_count }}</div>
+        <div class="text-muted mt-2">Need corrections</div>
+      </div>
+    </a>
+  </div>
+
+  {# ✅ Recent Students #}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Recent Students</h3>
+        <div class="card-actions">
+          <a href="{% url 'portal_student_list' %}" class="btn btn-outline-primary btn-sm">
+            View all
+          </a>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>Registration No</th>
+              <th>Student</th>
+              <th>Event</th>
+              <th>Status</th>
+              <th class="w-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in recent_students %}
+              <tr>
+                <td class="text-muted">{{ s.sa_registration_no }}</td>
+                <td>{{ s.first_name_en }} {{ s.last_name_en }}</td>
+                <td>
+                  {% if s.event %}
+                    <span class="badge bg-blue-lt">{{ s.event.code }}</span>
+                    <span class="ms-2">{{ s.event.name }}</span>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if s.status == "DRAFT" %}
+                    <span class="badge bg-warning-lt">Draft</span>
+                  {% elif s.status == "SUBMITTED" %}
+                    <span class="badge bg-blue-lt">Submitted</span>
+                  {% elif s.status == "ACCEPTED" %}
+                    <span class="badge bg-green-lt">Accepted</span>
+                  {% elif s.status == "REJECTED" %}
+                    <span class="badge bg-red-lt">Rejected</span>
+                  {% else %}
+                    <span class="badge bg-secondary-lt">{{ s.status }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_student_edit' s.pk %}">
+                    Edit
+                  </a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                  No students yet.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# ✅ Current Open Events #}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Current Open Events</h3>
+      </div>
+      <div class="card-body">
+        {% if open_events %}
+          <div class="table-responsive">
+            <table class="table table-vcenter">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>City</th>
+                  <th>Deadline</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ev in open_events %}
+                <tr>
+                  <td><span class="badge bg-blue-lt">{{ ev.code }}</span></td>
+                  <td>{{ ev.name }}</td>
+                  <td>{{ ev.city|default:"-" }}</td>
+                  <td>{{ ev.deadline|default:"-" }}</td>
+                  <td><span class="badge bg-green-lt">OPEN</span></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-muted">No OPEN events currently.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
