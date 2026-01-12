@@ -85,8 +85,12 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # ✅ Use STORAGES (Django 6) and NON-manifest storage (prevents .map failures)
 STORAGES = {
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "OPTIONS": {"manifest_strict": False},
+    }
 }
+
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/login/"
