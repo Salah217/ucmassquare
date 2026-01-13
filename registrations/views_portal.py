@@ -469,7 +469,9 @@ def student_wizard_step1(request, pk=None):
                 "gender": cd["gender"],
             })
             _wizard_set(request, wiz, pk=pk)
-            return redirect("portal_student_wizard_step2_edit" if pk else "portal_student_wizard_step2")
+
+            # ✅ FIX (ONLY CHANGE): pass pk when redirecting to the edit URL
+            return redirect("portal_student_wizard_step2_edit", pk=pk) if pk else redirect("portal_student_wizard_step2")
     else:
         form = StudentStep1Form(initial=initial, user=user)
 
