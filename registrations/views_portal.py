@@ -531,7 +531,8 @@ def student_wizard_step2(request, pk=None):
                 "notes": cd.get("notes", ""),
             })
             _wizard_set(request, wiz, pk=pk)
-            return redirect("portal_student_wizard_review_edit" if pk else "portal_student_wizard_review")
+            return redirect("portal_student_wizard_review_edit", pk=pk) if pk else redirect("portal_student_wizard_review")
+
     else:
         form = StudentStep2Form(initial=initial, user=user)
 
