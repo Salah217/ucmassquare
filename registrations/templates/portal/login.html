@@ -1,4 +1,5 @@
 {% extends "portal/base.html" %}
+{% load static %}
 
 {% block title %}Login | UCMAS{% endblock %}
 
@@ -7,13 +8,12 @@
   <div class="container container-tight py-4">
 
     <div class="text-center mb-4">
-      {# ✅ LOGO ADDED (ONLY CHANGE) #}
       <img
         src="{% static 'brand/logo.jpg' %}"
-        alt="Arabic Square Logo"
-        style="height:90px;width:auto;margin-bottom:12px;"
+        alt="Arabic Square"
+        style="height:90px; width:auto;"
+        class="mb-3"
       >
-
       <h1 class="navbar-brand navbar-brand-autodark">UCMAS KSA</h1>
       <div class="text-muted">School / Association Portal</div>
     </div>
