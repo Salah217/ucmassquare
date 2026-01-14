@@ -16,3 +16,127 @@
   <script src="{% static 'tabler/js/tabler.min.js' %}"></script>
 </body>
 </html>
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}UCMAS{% endblock %}</title>
+
+  <link rel="stylesheet" href="{% static 'tabler/css/tabler.min.css' %}">
+  <link rel="stylesheet" href="{% static 'tabler/css/tabler-vendors.min.css' %}">
+
+  {# Small, safe light-theme tweaks (keeps Tabler) #}
+  <style>
+    .brand-logo {
+      height: 44px;
+      width: 44px;
+      object-fit: contain;
+    }
+    .brand-name {
+      font-weight: 700;
+      letter-spacing: .2px;
+      line-height: 1.1;
+    }
+    .brand-sub {
+      font-size: 12px;
+      color: var(--tblr-muted);
+      line-height: 1.1;
+    }
+    .navbar-brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body class="d-flex flex-column bg-white">
+  <header class="navbar navbar-expand-md navbar-light d-print-none border-bottom">
+    <div class="container-xl">
+
+      <a class="navbar-brand navbar-brand-wrap" href="{% url 'portal_dashboard' %}">
+        {# ✅ Put your logo here: static/brand/logo.jpg (or png) #}
+        <img src="{% static 'brand/logo.jpg' %}" alt="Company Logo" class="brand-logo">
+        <div>
+          <div class="brand-name">UCMAS Portal</div>
+          <div class="brand-sub">Arabic Square · Registration System</div>
+        </div>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu"
+              aria-controls="navbar-menu" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbar-menu">
+        <div class="navbar-nav ms-auto align-items-md-center gap-2">
+
+          <a class="nav-link" href="{% url 'portal_dashboard' %}">
+            <span class="nav-link-title">Dashboard</span>
+          </a>
+
+          <a class="nav-link" href="{% url 'portal_student_list' %}">
+            <span class="nav-link-title">Students</span>
+          </a>
+
+          <a class="btn btn-primary" href="{% url 'portal_student_add' %}">
+            Add Student
+          </a>
+
+          {% if request.user.is_authenticated %}
+            <div class="nav-item dropdown">
+              <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Open user menu">
+                <div class="d-none d-xl-block ps-2">
+                  <div class="fw-semibold">{{ request.user.username }}</div>
+                  <div class="mt-1 small text-muted">
+                    {% if org_name %}{{ org_name }}{% endif %}
+                  </div>
+                </div>
+              </a>
+              <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
+                <a class="dropdown-item" href="{% url 'portal_logout' %}">Logout</a>
+              </div>
+            </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="page-wrapper">
+    <div class="page-body">
+      <div class="container-xl py-3">
+
+        {# ✅ Messages #}
+        {% if messages %}
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mb-3" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+    <footer class="footer footer-transparent d-print-none border-top">
+      <div class="container-xl">
+        <div class="row text-center align-items-center flex-row-reverse">
+          <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+            <small class="text-muted">
+              © {% now "Y" %} Arabic Square · UCMAS Registration Portal
+            </small>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="{% static 'tabler/js/tabler.min.js' %}"></script>
+</body>
+</html>
