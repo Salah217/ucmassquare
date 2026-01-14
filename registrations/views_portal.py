@@ -501,7 +501,7 @@ def student_wizard_step2(request, pk=None):
 
     # guard: must have step1 data
     if not wiz.get("event_id"):
-        return redirect("portal_student_wizard_step1_edit" if pk else "portal_student_wizard_step1")
+        return redirect("portal_student_wizard_step1_edit", pk=pk) if pk else redirect("portal_student_wizard_step1")
 
     # preload step2 from DB if editing and missing
     if pk and ("guardian_name" not in wiz):
@@ -560,7 +560,8 @@ def student_wizard_review(request, pk=None):
 
     wiz = _wizard_get(request, pk=pk)
     if not wiz.get("event_id") or not wiz.get("guardian_name"):
-        return redirect("portal_student_wizard_step1_edit" if pk else "portal_student_wizard_step1")
+     return redirect("portal_student_wizard_step1_edit", pk=pk) if pk else redirect("portal_student_wizard_step1")
+
 
     event = get_object_or_404(Event, id=wiz["event_id"])
 
