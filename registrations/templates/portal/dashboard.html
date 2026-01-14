@@ -6,10 +6,9 @@
 <div class="page-header d-print-none">
   <div class="row align-items-center">
     <div class="col">
-      <h2 class="page-title mb-1">Dashboard</h2>
-      <div class="text-muted">
-        Welcome, <span class="fw-semibold">{{ request.user.username }}</span>
-        {% if org_name %} · <span class="fw-semibold">{{ org_name }}</span>{% endif %}
+      <h2 class="page-title">Dashboard</h2>
+      <div class="text-muted mt-1">
+        Welcome, {{ request.user.username }}{% if org_name %} · {{ org_name }}{% endif %}
       </div>
     </div>
     <div class="col-auto ms-auto d-print-none">
@@ -90,7 +89,7 @@
             {% for s in recent_students %}
               <tr>
                 <td class="text-muted">{{ s.sa_registration_no }}</td>
-                <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
+                <td>{{ s.first_name_en }} {{ s.last_name_en }}</td>
                 <td>
                   {% if s.event %}
                     <span class="badge bg-blue-lt">{{ s.event.code }}</span>
@@ -154,7 +153,7 @@
                 {% for ev in open_events %}
                 <tr>
                   <td><span class="badge bg-blue-lt">{{ ev.code }}</span></td>
-                  <td class="fw-semibold">{{ ev.name }}</td>
+                  <td>{{ ev.name }}</td>
                   <td>{{ ev.city|default:"-" }}</td>
                   <td>{{ ev.deadline|default:"-" }}</td>
                   <td><span class="badge bg-green-lt">OPEN</span></td>
