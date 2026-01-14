@@ -8,15 +8,19 @@
   <div class="container container-tight py-4">
 
     <div class="text-center mb-4">
-      <img
-        src="{% static 'brand/logo.jpeg'' %}"
-        alt="Arabic Square"
-        style="height:90px; width:auto;"
-        class="mb-3"
-      >
-      <h1 class="navbar-brand navbar-brand-autodark">UCMAS KSA</h1>
-      <div class="text-muted">School / Association Portal</div>
-    </div>
+
+  <img
+    src="{% static 'brand/logo.jpeg' %}"
+    alt="Arabic Square"
+    class="mb-3"
+    style="height:90px; width:auto; display:block; margin-left:auto; margin-right:auto;"
+  >
+
+  <h1 class="mb-1 fw-bold">UCMAS KSA</h1>
+  <div class="text-muted">School / Association Portal</div>
+
+</div>
+
 
     <form class="card card-md" method="post">
       {% csrf_token %}
