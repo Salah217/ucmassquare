@@ -124,22 +124,24 @@
 
           <!-- Bottom Logout -->
           <div class="sidebar-bottom">
-  <ul class="navbar-nav">
-    <li class="nav-item">
-      <form method="post" action="{% url 'portal_logout' %}">
-        {% csrf_token %}
-        <button type="submit"
-          class="nav-link text-danger w-100 text-start border-0 bg-transparent">
-          <span class="nav-link-title">Logout</span>
-        </button>
-      </form>
-    </li>
-  </ul>
-</div>
+            <ul class="navbar-nav">
+              <li class="nav-item">
+                <form method="post" action="{% url 'portal_logout' %}">
+                  {% csrf_token %}
+                  <button type="submit"
+                    class="nav-link text-danger w-100 text-start border-0 bg-transparent logout-btn">
+                    <span class="nav-link-title">Logout</span>
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </div>
 
+        </div>
+      </aside>
 
       <!-- Main -->
-      <div class="page-wrapper">
+      <div class="page-wrapper flex-fill">
 
         <!-- Topbar -->
         <header class="navbar navbar-expand-md navbar-light d-none d-lg-flex">
