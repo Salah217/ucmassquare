@@ -8,6 +8,65 @@
 
     <link rel="stylesheet" href="{% static 'tabler/css/tabler.min.css' %}">
     <link rel="stylesheet" href="{% static 'tabler/css/tabler-vendors.min.css' %}">
+
+    <style>
+      /* Sidebar brand block */
+      .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        text-decoration: none;
+        color: inherit;
+      }
+      .sidebar-brand:hover { text-decoration: none; }
+
+      .sidebar-logo {
+        height: 44px;
+        width: 44px;
+        object-fit: contain;
+        background: #fff;
+        border-radius: 10px;
+        padding: 6px;
+      }
+
+      .sidebar-title {
+        font-weight: 700;
+        letter-spacing: .2px;
+        line-height: 1.1;
+      }
+      .sidebar-subtitle {
+        font-size: 12px;
+        opacity: .75;
+        line-height: 1.1;
+      }
+
+      /* Make sidebar full height + push logout to bottom */
+      .sidebar-flex {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: calc(100vh - 1rem);
+      }
+      .sidebar-nav {
+        flex: 1 1 auto;
+      }
+      .sidebar-bottom {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255,255,255,.12);
+      }
+
+      /* Logout button style */
+      .logout-btn {
+        width: 100%;
+        text-align: left;
+        padding: .5rem .75rem;
+        border-radius: .5rem;
+      }
+      .logout-btn:hover {
+        background: rgba(220, 53, 69, .12);
+      }
+    </style>
   </head>
 
   <body>
@@ -15,21 +74,28 @@
 
       <!-- Sidebar -->
       <aside class="navbar navbar-vertical navbar-expand-lg" data-bs-theme="dark">
-        <div class="container-fluid">
+        <div class="container-fluid sidebar-flex">
 
-          <h1 class="navbar-brand navbar-brand-autodark">
-            <a href="{% url 'portal_dashboard' %}">
-              UCMAS KSA
+          <!-- Brand -->
+          <h1 class="navbar-brand navbar-brand-autodark mb-2">
+            <a class="sidebar-brand" href="{% url 'portal_dashboard' %}">
+              {# Use the correct file extension you have on Render: logo.jpeg #}
+              <img src="{% static 'brand/logo.jpeg' %}" alt="Arabic Square" class="sidebar-logo">
+              <div>
+                <div class="sidebar-title">UCMAS KSA</div>
+                <div class="sidebar-subtitle">School / Association Portal</div>
+              </div>
             </a>
           </h1>
 
+          <!-- Mobile menu toggle -->
           <div class="navbar-nav flex-row d-lg-none">
             <a class="nav-link" data-bs-toggle="collapse" data-bs-target="#sidebar-menu" aria-expanded="false">
               Menu
             </a>
           </div>
 
-          <div class="collapse navbar-collapse" id="sidebar-menu">
+          <div class="collapse navbar-collapse sidebar-nav" id="sidebar-menu">
             <ul class="navbar-nav pt-lg-3">
 
               <li class="nav-item">
@@ -43,6 +109,7 @@
                   <span class="nav-link-title">Students</span>
                 </a>
               </li>
+
               {% if request.user.role == "ORG_MANAGER" %}
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'portal_submit' %}">
@@ -50,21 +117,20 @@
                 </a>
               </li>
               {% endif %}
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'portal_student_add' %}">
-                  <span class="nav-link-title">Add Student</span>
-                </a>
-              </li>
 
-              <li class="nav-item mt-3">
-               <form method="post" action="{% url 'portal_logout' %}">
-                    {% csrf_token %}
-                 <button type="submit" class="nav-link text-danger btn btn-link p-0 w-100 text-start">
-                   <span class="nav-link-title">Logout</span>
-                 </button>
-               </form>
-              </li>
+              {# ✅ Removed Add Student from sidebar to keep UI clean and rely on dashboard header button #}
+
             </ul>
+          </div>
+
+          <!-- Bottom Logout -->
+          <div class="sidebar-bottom">
+            <form method="post" action="{% url 'portal_logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-link nav-link text-danger logout-btn p-0">
+                <span class="nav-link-title">Logout</span>
+              </button>
+            </form>
           </div>
 
         </div>
@@ -90,7 +156,7 @@
                 <div class="dropdown-menu dropdown-menu-end dropdown-menu-arrow">
                   <form method="post" action="{% url 'portal_logout' %}" class="px-2 py-1">
                     {% csrf_token %}
-                     <button type="submit" class="dropdown-item">Logout</button>
+                    <button type="submit" class="dropdown-item">Logout</button>
                   </form>
                 </div>
               </div>
