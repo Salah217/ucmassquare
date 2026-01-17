@@ -3,21 +3,22 @@
 {% block title %}Dashboard | UCMAS{% endblock %}
 
 {% block content %}
-<div class="page-header d-print-none">
+<div class="page-header d-print-none mb-3">
   <div class="row align-items-center">
     <div class="col">
-      <h2 class="page-title">Dashboard</h2>
+      <h2 class="page-title mb-0">Dashboard</h2>
       <div class="text-muted mt-1">
         Welcome, {{ request.user.username }}{% if org_name %} · {{ org_name }}{% endif %}
       </div>
     </div>
-    <div class="col-auto ms-auto d-print-none">
+    <div class="col-auto ms-auto">
       <a href="{% url 'portal_student_add' %}" class="btn btn-primary">
         Add Student
       </a>
     </div>
   </div>
 </div>
+
 
 {# ✅ KPI Cards (CLICKABLE) #}
 <div class="row row-deck row-cards">
