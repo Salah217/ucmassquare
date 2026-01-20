@@ -45,25 +45,28 @@
         </a>
       </div>
 
-      <div class="col-md-4">
-        <a href="{% url 'portal_competition_register' %}" class="card card-link text-decoration-none">
-          <div class="card-body">
-            <div class="subheader">Module</div>
-            <div class="h3 mb-1">Register in a Competition</div>
-            <div class="text-muted">Select students and add them to a competition.</div>
+    <div class="col-md-4">
+  <a href="{% url 'portal_competition_register' %}" class="card card-link text-decoration-none">
+    <div class="card-body">
+      <div class="subheader">Module</div>
+      <div class="h3 mb-1">Register in a Competition</div>
+      <div class="text-muted">
+        Select students and add them to a competition.
+      </div>
 
-            {# (3) Manager-only next step button (enable later when submit/payment url exists) #}
-            {# {% if is_manager %}
-              <div class="mt-3">
-                <a class="btn btn-danger w-100" href="{% url 'portal_competition_submit_confirm' %}">
-                  Submit & Payment
-                </a>
-              </div>
-            {% endif %} #}
-
-          </div>
+      {# Manager-only next step button (enable later when submit/payment url exists) #}
+      {# 
+      <div class="mt-3">
+        <a class="btn btn-danger w-100" href="#">
+          Submit & Payment
         </a>
       </div>
+      #}
+
+    </div>
+  </a>
+</div>
+
 
     </div>
   </div>
