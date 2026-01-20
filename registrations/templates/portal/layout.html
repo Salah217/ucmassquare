@@ -109,13 +109,7 @@
                 </a>
               </li>
 
-              {% if request.user.role == "ORG_MANAGER" %}
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'portal_submit' %}">
-                  <span class="nav-link-title">Submit</span>
-                </a>
-              </li>
-              {% endif %}
+             
 
               {# ✅ Removed Add Student from sidebar to keep UI clean and rely on dashboard header button #}
 

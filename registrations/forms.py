@@ -12,7 +12,7 @@ class TablerMixin:
     Apply Tabler-friendly CSS classes automatically to all fields.
     """
     def _apply_tabler(self):
-        for name, field in self.fields.items():
+        for name, field in self.fields.items(): # pyright: ignore[reportAttributeAccessIssue]
             w = field.widget
             if isinstance(w, forms.Textarea):
                 w.attrs.update({"class": "form-control", "rows": 3})
