@@ -23,64 +23,80 @@
     <form method="post" novalidate>
       {% csrf_token %}
 
+      {# Show top errors (very important for debugging) #}
+      {% if form.errors %}
+        <div class="alert alert-danger">
+          Please fix the highlighted fields below.
+        </div>
+      {% endif %}
       {% if form.non_field_errors %}
         <div class="alert alert-danger">{{ form.non_field_errors }}</div>
       {% endif %}
 
       <div class="row g-3">
-        <div class="col-12 col-md-6">
-          <label class="form-label">{{ form.event.label }}</label>
-          {{ form.event }}
-          {% if form.event.errors %}<div class="invalid-feedback d-block">{{ form.event.errors|striptags }}</div>{% endif %}
-        </div>
-
-        <div class="col-12 col-md-6">
-          <label class="form-label">{{ form.level.label }}</label>
-          {{ form.level }}
-          {% if form.level.errors %}<div class="invalid-feedback d-block">{{ form.level.errors|striptags }}</div>{% endif %}
-        </div>
-
-        <div class="col-12"><hr class="my-2"></div>
 
         <div class="col-12 col-md-6">
           <label class="form-label">{{ form.first_name_en.label }}</label>
           {{ form.first_name_en }}
-          {% if form.first_name_en.errors %}<div class="invalid-feedback d-block">{{ form.first_name_en.errors|striptags }}</div>{% endif %}
+          {% if form.first_name_en.errors %}
+            <div class="invalid-feedback d-block">{{ form.first_name_en.errors|striptags }}</div>
+          {% endif %}
         </div>
 
         <div class="col-12 col-md-6">
           <label class="form-label">{{ form.last_name_en.label }}</label>
           {{ form.last_name_en }}
-          {% if form.last_name_en.errors %}<div class="invalid-feedback d-block">{{ form.last_name_en.errors|striptags }}</div>{% endif %}
+          {% if form.last_name_en.errors %}
+            <div class="invalid-feedback d-block">{{ form.last_name_en.errors|striptags }}</div>
+          {% endif %}
         </div>
 
         <div class="col-12 col-md-6">
           <label class="form-label">{{ form.first_name_ar.label }}</label>
           {{ form.first_name_ar }}
-          {% if form.first_name_ar.errors %}<div class="invalid-feedback d-block">{{ form.first_name_ar.errors|striptags }}</div>{% endif %}
+          {% if form.first_name_ar.errors %}
+            <div class="invalid-feedback d-block">{{ form.first_name_ar.errors|striptags }}</div>
+          {% endif %}
         </div>
 
         <div class="col-12 col-md-6">
           <label class="form-label">{{ form.last_name_ar.label }}</label>
           {{ form.last_name_ar }}
-          {% if form.last_name_ar.errors %}<div class="invalid-feedback d-block">{{ form.last_name_ar.errors|striptags }}</div>{% endif %}
+          {% if form.last_name_ar.errors %}
+            <div class="invalid-feedback d-block">{{ form.last_name_ar.errors|striptags }}</div>
+          {% endif %}
         </div>
 
         <div class="col-12 col-md-6">
           <label class="form-label">{{ form.date_of_birth.label }}</label>
           {{ form.date_of_birth }}
-          {% if form.date_of_birth.errors %}<div class="invalid-feedback d-block">{{ form.date_of_birth.errors|striptags }}</div>{% endif %}
+          {% if form.date_of_birth.errors %}
+            <div class="invalid-feedback d-block">{{ form.date_of_birth.errors|striptags }}</div>
+          {% endif %}
         </div>
 
         <div class="col-12 col-md-6">
           <label class="form-label">{{ form.gender.label }}</label>
           {{ form.gender }}
-          {% if form.gender.errors %}<div class="invalid-feedback d-block">{{ form.gender.errors|striptags }}</div>{% endif %}
+          {% if form.gender.errors %}
+            <div class="invalid-feedback d-block">{{ form.gender.errors|striptags }}</div>
+          {% endif %}
         </div>
+
+        {# ✅ IMPORTANT: this must be current_level (matches the view) #}
+        <div class="col-12 col-md-6">
+          <label class="form-label">{{ form.current_level.label }}</label>
+          {{ form.current_level }}
+          {% if form.current_level.errors %}
+            <div class="invalid-feedback d-block">{{ form.current_level.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
       </div>
 
       <div class="mt-4 d-flex gap-2">
         <button class="btn btn-primary" type="submit">Next</button>
+
         <a class="btn btn-outline-secondary"
            href="{% if pk %}{% url 'portal_student_wizard_cancel_edit' pk %}{% else %}{% url 'portal_student_wizard_cancel' %}{% endif %}">
           Cancel
