@@ -11,11 +11,12 @@
         Welcome, {{ request.user.username }}{% if org_name %} · {{ org_name }}{% endif %}
       </div>
     </div>
-    <div class="col-auto ms-auto">
-      <a href="{% url 'portal_student_add' %}" class="btn btn-primary">
-        Add Student
-      </a>
-    </div>
+
+    {# ✅ Removed Add Student button (use the module card instead) #}
+    {# <div class="col-auto ms-auto">
+      <a href="{% url 'portal_student_add' %}" class="btn btn-primary">Add Student</a>
+    </div> #}
+
   </div>
 </div>
 
@@ -28,7 +29,7 @@
       <div class="col-md-4">
         <a href="{% url 'portal_student_add' %}" class="card card-link text-decoration-none">
           <div class="card-body">
-            <div class="subheader">Module</div>
+            <div class="subheader">MODULE</div>
             <div class="h3 mb-1">Register New Student</div>
             <div class="text-muted">Add a student to your school database.</div>
           </div>
@@ -38,32 +39,24 @@
       <div class="col-md-4">
         <a href="{% url 'portal_course_register' %}" class="card card-link text-decoration-none">
           <div class="card-body">
-            <div class="subheader">Module</div>
+            <div class="subheader">MODULE</div>
             <div class="h3 mb-1">Register in a Course</div>
             <div class="text-muted">Select students and enroll them in a course.</div>
           </div>
         </a>
       </div>
 
-    <div class="col-md-4">
-  <a href="{% url 'portal_competition_register' %}" class="card card-link text-decoration-none">
-    <div class="card-body">
-      <div class="subheader">Module</div>
-      <div class="h3 mb-1">Register in a Competition</div>
-      <div class="text-muted">
-        Select students and add them to a competition.
-      </div>
+      <div class="col-md-4">
+        <a href="{% url 'portal_competition_register' %}" class="card card-link text-decoration-none">
+          <div class="card-body">
+            <div class="subheader">MODULE</div>
+            <div class="h3 mb-1">Register in a Competition</div>
+            <div class="text-muted">Select students and add them to a competition.</div>
 
-      <div class="mt-3">
-        <a class="btn btn-danger w-100" href="#">
-          Submit & Payment
+            {# ✅ Removed Submit & Payment from dashboard (will be a separate page after submission) #}
+          </div>
         </a>
       </div>
-
-    </div>
-  </a>
-</div>
-
 
     </div>
   </div>
@@ -134,14 +127,10 @@
           <tbody>
             {% for s in recent_students %}
               <tr>
-                <td class="text-muted">{{ s.sa_registration_no|default:"—" }}</td>
+                <td class="text-muted">{{ s.sa_registration_no }}</td>
                 <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
                 <td>
-                  {% if s.current_level %}
-                    <span class="badge bg-blue-lt">Level {{ s.current_level }}</span>
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
+                  <span class="badge bg-blue-lt">Level {{ s.current_level }}</span>
                 </td>
                 <td class="text-end">
                   <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_student_edit' s.pk %}">
@@ -178,7 +167,6 @@
                   <th>Name</th>
                   <th>City</th>
                   <th>Deadline</th>
-                  <th>Fee</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -189,12 +177,6 @@
                   <td class="fw-semibold">{{ ev.name }}</td>
                   <td>{{ ev.city|default:"-" }}</td>
                   <td>{{ ev.deadline|default:"-" }}</td>
-
-                  {# (1) Currency + 2 decimals #}
-                  <td class="text-muted">
-                    {{ ev.fee_per_student|floatformat:2 }} <small class="text-muted">SAR</small>
-                  </td>
-
                   <td><span class="badge bg-green-lt">OPEN</span></td>
                 </tr>
                 {% endfor %}
