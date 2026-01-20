@@ -9,7 +9,7 @@ urlpatterns = [
     path("login/", auth_views.LoginView.as_view(template_name="portal/login.html"), name="portal_login"),
     path("logout/", auth_views.LogoutView.as_view(template_name="portal/logout.html"), name="portal_logout"),
 
-    # Students list
+    # Students
     path("students/", v.student_list, name="portal_student_list"),
 
     # Wizard (Create)
@@ -26,11 +26,24 @@ urlpatterns = [
     path("students/<int:pk>/wizard/review/", v.student_wizard_review, name="portal_student_wizard_review_edit"),
     path("students/<int:pk>/wizard/cancel/", v.student_wizard_cancel, name="portal_student_wizard_cancel_edit"),
 
-    # Submit (managers only)
-    path("submit/", v.submit_students, name="portal_submit"),
-    path("submit/confirm/", v.submit_confirm, name="portal_submit_confirm"),
+    # ✅ NEW: Course registration
+    path("courses/register/", v.course_register, name="portal_course_register"),
+    path("courses/register/confirm/", v.course_register_confirm, name="portal_course_register_confirm"),
 
-    # Submit Selected (from list)
-    path("students/submit-selected/", v.submit_selected_confirm, name="portal_submit_selected_confirm"),
-    path("students/submit-selected/final/", v.submit_selected_final, name="portal_submit_selected_final"),
+    # ✅ NEW: Competition registration (EventRegistration)
+    path("competitions/register/", v.competition_register, name="portal_competition_register"),
+    path("competitions/register/confirm/", v.competition_register_confirm, name="portal_competition_register_confirm"),
+
+    # ✅ NEW: Manager submit + payment step (Tabby later)
+    path("competitions/submit/confirm/", v.competition_submit_confirm, name="portal_competition_submit_confirm"),
+    path("competitions/submit/final/", v.competition_submit_final, name="portal_competition_submit_final"),
+
+        # NEW: Course Registration (from Student DB)
+    path("courses/register/", v.course_register, name="portal_course_register"),
+    path("courses/register/confirm/", v.course_register_confirm, name="portal_course_register_confirm"),
+
+    # NEW: Competition Registration (from Student DB)
+    path("competitions/register/", v.competition_register, name="portal_competition_register"),
+    path("competitions/register/confirm/", v.competition_register_confirm, name="portal_competition_register_confirm"),
+
 ]

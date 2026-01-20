@@ -4,6 +4,7 @@ from django.core.validators import RegexValidator
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
 
 
 class Organization(models.Model):
@@ -49,34 +50,35 @@ class User(AbstractUser):
     def is_org_user(self):
         return self.role in ("ORG_MANAGER", "ORG_STAFF")
 
+
 class Event(models.Model):
     STATUS = [
         ("OPEN", "Open"),
         ("CLOSED", "Closed"),
     ]
-    code = models.CharField(max_length=30, unique=True)  # e.g. NF-2026, RIY-R1-2026, INT-2026
-    name = models.CharField(max_length=200)   # e.g. National Final 2026
-    season = models.CharField(max_length=50, blank=True)  # e.g. 2026
+    code = models.CharField(max_length=30, unique=True)
+    name = models.CharField(max_length=200)
+    season = models.CharField(max_length=50, blank=True)
     city = models.CharField(max_length=100, blank=True)
     deadline = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS, default="OPEN")
     notes = models.TextField(blank=True)
+
+    # ✅ NEW: event fee (admin sets)
+    fee_per_student = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
 
-class Student(models.Model):
-    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="students")
 
+class Student(models.Model):
+    """
+    Permanent student database record (per organization).
+    Not tied to any event.
+    """
     GENDER = [("M", "Male"), ("F", "Female")]
-    STATUS = [
-        ("DRAFT", "Draft"),
-        ("SUBMITTED", "Submitted"),
-        ("ACCEPTED", "Accepted"),
-        ("REJECTED", "Rejected"),
-    ]
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="students")
 
@@ -94,30 +96,20 @@ class Student(models.Model):
     )
     guardian_email = models.EmailField(blank=True)
 
-    level = models.CharField(max_length=50, blank=True)
-    
+    # ✅ Student level (1..10)
+    current_level = models.PositiveSmallIntegerField(default=1)
+
     notes = models.TextField(blank=True)
 
+    # ✅ Keep as permanent Student ID (minimum change)
     sa_registration_no = models.CharField(max_length=30, unique=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS, default="DRAFT")
-    rejection_reason = models.CharField(max_length=255, blank=True) 
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    submitted_by = models.ForeignKey(
-    "registrations.User",
-    null=True,
-    blank=True,
-    on_delete=models.SET_NULL,
-    related_name="submitted_students",    
-
-)  
-
-    def clean(self):
-     super().clean()
-    # Event must be selected
-     if not self.event_id:
-      raise ValidationError({"event": _("Event is required for registration.")})
 
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        super().clean()
+        if self.current_level < 1 or self.current_level > 10:
+            raise ValidationError({"current_level": _("Level must be between 1 and 10.")})
 
     def save(self, *args, **kwargs):
         if not self.sa_registration_no:
@@ -133,3 +125,101 @@ class Student(models.Model):
 
     def __str__(self):
         return f"{self.sa_registration_no} - {self.first_name_en} {self.last_name_en}"
+
+
+class Course(models.Model):
+    """
+    Courses offered by UCMAS (e.g., Level 1..10).
+    Admin creates them.
+    """
+    level = models.PositiveSmallIntegerField()
+    name = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+
+    # Optional fee per course
+    fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        super().clean()
+        if self.level < 1 or self.level > 10:
+            raise ValidationError({"level": _("Level must be between 1 and 10.")})
+
+    def __str__(self):
+        return f"Level {self.level} - {self.name}"
+
+
+class CourseEnrollment(models.Model):
+    STATUS = [
+        ("ENROLLED", "Enrolled"),
+        ("COMPLETED", "Completed"),
+        ("DROPPED", "Dropped"),
+    ]
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="course_enrollments")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="course_enrollments")
+    course = models.ForeignKey(Course, on_delete=models.PROTECT, related_name="enrollments")
+
+    status = models.CharField(max_length=20, choices=STATUS, default="ENROLLED")
+
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["student", "course"], name="uniq_student_course")
+        ]
+
+    def __str__(self):
+        return f"{self.student} -> {self.course} ({self.status})"
+
+
+class EventRegistration(models.Model):
+    STATUS = [
+        ("DRAFT", "Draft"),
+        ("SUBMITTED", "Submitted"),
+        ("PENDING_PAYMENT", "Pending Payment"),
+        ("PAID", "Paid"),
+        ("ACCEPTED", "Accepted"),
+        ("REJECTED", "Rejected"),
+    ]
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="event_registrations")
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="registrations")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="event_registrations")
+
+    status = models.CharField(max_length=20, choices=STATUS, default="DRAFT")
+
+    # fee snapshot at the time of submission
+    fee_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    rejection_reason = models.CharField(max_length=255, blank=True)
+
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="submitted_event_registrations",
+    )
+
+    # payment tracking (Tabby later)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_ref = models.CharField(max_length=100, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["event", "student"], name="uniq_event_student")
+        ]
+
+    def clean(self):
+        super().clean()
+        # Ensure student belongs to same org
+        if self.student_id and self.organization_id and self.student.organization_id != self.organization_id:
+            raise ValidationError(_("Student must belong to the same organization."))
+
+    def __str__(self):
+        return f"{self.event.code} - {self.student.sa_registration_no} ({self.status})"

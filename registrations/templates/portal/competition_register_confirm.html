@@ -1,0 +1,76 @@
+{% extends "portal/layout.html" %}
+{% block title %}Competition Drafts Created | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Competition Drafts Created</h2>
+      <div class="text-muted mt-1">
+        Event: <strong>{{ event.code }}</strong> — {{ event.name }}
+      </div>
+    </div>
+    <div class="col-auto ms-auto">
+      <a href="{% url 'portal_competition_register' %}" class="btn btn-outline-primary">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="row row-cards mb-3">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">New Draft Registrations</div>
+        <div class="h1 mb-0">{{ created_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Fee per student</div>
+        <div class="h1 mb-0">{{ fee_per_student }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Total fee</div>
+        <div class="h1 mb-0">{{ total_fee }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title mb-0">Students in this draft</h3>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Registration No</th>
+          <th>Student</th>
+          <th>Level</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td class="text-muted">{{ s.sa_registration_no }}</td>
+          <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
+          <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="alert alert-info mt-3">
+  Next step: we will add the “Submit + Payment” flow to move status from
+  <strong>DRAFT → SUBMITTED → PENDING_PAYMENT → PAID → ACCEPTED</strong>.
+</div>
+{% endblock %}

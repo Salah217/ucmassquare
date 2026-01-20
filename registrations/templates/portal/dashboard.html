@@ -19,46 +19,92 @@
   </div>
 </div>
 
-
-{# ✅ KPI Cards (CLICKABLE) #}
 <div class="row row-deck row-cards">
 
+  {# ✅ 3 Main Modules (Action cards) #}
+  <div class="col-12">
+    <div class="row g-3">
+
+      <div class="col-md-4">
+        <a href="{% url 'portal_student_add' %}" class="card card-link text-decoration-none">
+          <div class="card-body">
+            <div class="subheader">Module</div>
+            <div class="h3 mb-1">Register New Student</div>
+            <div class="text-muted">Add a student to your school database.</div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-md-4">
+        <a href="{% url 'portal_course_register' %}" class="card card-link text-decoration-none">
+          <div class="card-body">
+            <div class="subheader">Module</div>
+            <div class="h3 mb-1">Register in a Course</div>
+            <div class="text-muted">Select students and enroll them in a course.</div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-md-4">
+        <a href="{% url 'portal_competition_register' %}" class="card card-link text-decoration-none">
+          <div class="card-body">
+            <div class="subheader">Module</div>
+            <div class="h3 mb-1">Register in a Competition</div>
+            <div class="text-muted">Select students and add them to a competition.</div>
+
+            {# (3) Manager-only next step button (enable later when submit/payment url exists) #}
+            {# {% if is_manager %}
+              <div class="mt-3">
+                <a class="btn btn-danger w-100" href="{% url 'portal_competition_submit_confirm' %}">
+                  Submit & Payment
+                </a>
+              </div>
+            {% endif %} #}
+
+          </div>
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  {# ✅ KPIs #}
   <div class="col-sm-6 col-lg-3">
-    <a href="{% url 'portal_student_list' %}?status=DRAFT" class="card text-decoration-none">
+    <a href="{% url 'portal_student_list' %}" class="card text-decoration-none">
       <div class="card-body">
-        <div class="subheader">Draft</div>
-        <div class="h1 mb-0">{{ draft_count }}</div>
-        <div class="text-muted mt-2">Students not submitted yet</div>
+        <div class="subheader">Total Students</div>
+        <div class="h1 mb-0">{{ total_students }}</div>
+        <div class="text-muted mt-2">Students in your school database</div>
       </div>
     </a>
   </div>
 
   <div class="col-sm-6 col-lg-3">
-    <a href="{% url 'portal_student_list' %}?status=SUBMITTED" class="card text-decoration-none">
+    <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none">
       <div class="card-body">
-        <div class="subheader">Submitted</div>
-        <div class="h1 mb-0">{{ submitted_count }}</div>
-        <div class="text-muted mt-2">Waiting review</div>
+        <div class="subheader">Open Competitions</div>
+        <div class="h1 mb-0">{{ open_events|length }}</div>
+        <div class="text-muted mt-2">Available competitions</div>
       </div>
     </a>
   </div>
 
   <div class="col-sm-6 col-lg-3">
-    <a href="{% url 'portal_student_list' %}?status=ACCEPTED" class="card text-decoration-none">
+    <a href="{% url 'portal_course_register' %}" class="card text-decoration-none">
       <div class="card-body">
-        <div class="subheader">Accepted</div>
-        <div class="h1 mb-0">{{ accepted_count }}</div>
-        <div class="text-muted mt-2">Approved registrations</div>
+        <div class="subheader">Courses</div>
+        <div class="h1 mb-0">—</div>
+        <div class="text-muted mt-2">Course registrations</div>
       </div>
     </a>
   </div>
 
   <div class="col-sm-6 col-lg-3">
-    <a href="{% url 'portal_student_list' %}?status=REJECTED" class="card text-decoration-none">
+    <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none">
       <div class="card-body">
-        <div class="subheader">Rejected</div>
-        <div class="h1 mb-0">{{ rejected_count }}</div>
-        <div class="text-muted mt-2">Need corrections</div>
+        <div class="subheader">Competition Registrations</div>
+        <div class="h1 mb-0">—</div>
+        <div class="text-muted mt-2">Payments & approvals</div>
       </div>
     </a>
   </div>
@@ -81,38 +127,23 @@
             <tr>
               <th>Registration No</th>
               <th>Student</th>
-              <th>Event</th>
-              <th>Status</th>
+              <th>Level</th>
               <th class="w-1"></th>
             </tr>
           </thead>
           <tbody>
             {% for s in recent_students %}
               <tr>
-                <td class="text-muted">{{ s.sa_registration_no }}</td>
-                <td>{{ s.first_name_en }} {{ s.last_name_en }}</td>
+                <td class="text-muted">{{ s.sa_registration_no|default:"—" }}</td>
+                <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
                 <td>
-                  {% if s.event %}
-                    <span class="badge bg-blue-lt">{{ s.event.code }}</span>
-                    <span class="ms-2">{{ s.event.name }}</span>
+                  {% if s.current_level %}
+                    <span class="badge bg-blue-lt">Level {{ s.current_level }}</span>
                   {% else %}
                     <span class="text-muted">—</span>
                   {% endif %}
                 </td>
-                <td>
-                  {% if s.status == "DRAFT" %}
-                    <span class="badge bg-warning-lt">Draft</span>
-                  {% elif s.status == "SUBMITTED" %}
-                    <span class="badge bg-blue-lt">Submitted</span>
-                  {% elif s.status == "ACCEPTED" %}
-                    <span class="badge bg-green-lt">Accepted</span>
-                  {% elif s.status == "REJECTED" %}
-                    <span class="badge bg-red-lt">Rejected</span>
-                  {% else %}
-                    <span class="badge bg-secondary-lt">{{ s.status }}</span>
-                  {% endif %}
-                </td>
-                <td>
+                <td class="text-end">
                   <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_student_edit' s.pk %}">
                     Edit
                   </a>
@@ -120,7 +151,7 @@
               </tr>
             {% empty %}
               <tr>
-                <td colspan="5" class="text-center text-muted py-4">
+                <td colspan="4" class="text-center text-muted py-4">
                   No students yet.
                 </td>
               </tr>
@@ -131,7 +162,7 @@
     </div>
   </div>
 
-  {# ✅ Current Open Events #}
+  {# ✅ Current Open Events (info table) #}
   <div class="col-12">
     <div class="card">
       <div class="card-header">
@@ -147,6 +178,7 @@
                   <th>Name</th>
                   <th>City</th>
                   <th>Deadline</th>
+                  <th>Fee</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -154,9 +186,15 @@
                 {% for ev in open_events %}
                 <tr>
                   <td><span class="badge bg-blue-lt">{{ ev.code }}</span></td>
-                  <td>{{ ev.name }}</td>
+                  <td class="fw-semibold">{{ ev.name }}</td>
                   <td>{{ ev.city|default:"-" }}</td>
                   <td>{{ ev.deadline|default:"-" }}</td>
+
+                  {# (1) Currency + 2 decimals #}
+                  <td class="text-muted">
+                    {{ ev.fee_per_student|floatformat:2 }} <small class="text-muted">SAR</small>
+                  </td>
+
                   <td><span class="badge bg-green-lt">OPEN</span></td>
                 </tr>
                 {% endfor %}

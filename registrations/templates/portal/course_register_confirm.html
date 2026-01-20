@@ -1,0 +1,115 @@
+{% extends "portal/layout.html" %}
+{% block title %}Competition Draft Created | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Competition Registration Draft Created</h2>
+      <div class="text-muted mt-1">
+        Added <strong>{{ created_count }}</strong> student(s) to
+        <strong>{{ event.code }}</strong> — {{ event.name }} as <strong>Draft</strong>.
+      </div>
+    </div>
+
+    <div class="col-auto ms-auto d-flex gap-2">
+      <a href="{% url 'portal_competition_register' %}" class="btn btn-outline-primary">
+        Back
+      </a>
+
+      {# OPTIONAL: only show if you later add manager submit URLs #}
+      {# 
+      {% if is_manager %}
+        <a href="{% url 'portal_competition_submit_confirm' %}?event_id={{ event.id }}" class="btn btn-danger">
+          Manager Submit (Payment)
+        </a>
+      {% endif %}
+      #}
+    </div>
+  </div>
+</div>
+
+<div class="row row-deck row-cards mb-3">
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Fee per student</div>
+        <div class="h1 mb-0">{{ fee_per_student }} SAR</div>
+        <div class="text-muted mt-2">From event settings</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Selected students</div>
+        <div class="h1 mb-0">{{ students|length }}</div>
+        <div class="text-muted mt-2">Included in this draft</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Total fee</div>
+        <div class="h1 mb-0">{{ total_fee }} SAR</div>
+        <div class="text-muted mt-2">Fee × selected</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Event deadline</div>
+        <div class="h1 mb-0">
+          {% if event.deadline %}{{ event.deadline }}{% else %}—{% endif %}
+        </div>
+        <div class="text-muted mt-2">Competition registration window</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title mb-0">Students added</h3>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Registration No</th>
+          <th>Student</th>
+          <th>Level</th>
+          <th>Guardian</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td class="text-muted">{{ s.sa_registration_no }}</td>
+          <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
+          <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
+          <td class="text-muted">{{ s.guardian_name }} · {{ s.guardian_phone }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-body">
+    <div class="text-muted">
+      Status is <strong>DRAFT</strong>. You can add more students by going back and selecting again.
+      {% if is_manager %}
+        When ready, you can proceed to the Manager Submit & Payment step (if enabled).
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

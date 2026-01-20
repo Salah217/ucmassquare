@@ -2,18 +2,22 @@ from django.core.exceptions import ValidationError
 from import_export import resources, fields
 from import_export.widgets import ForeignKeyWidget
 
-from .models import Student, Organization, Event
+from .models import Student, Organization
 
 
 class StudentResource(resources.ModelResource):
-    # Excel column: event_code  -> Student.event (FK) by Event.code
-    event = fields.Field(
-        column_name="event_code",
-        attribute="event",
-        widget=ForeignKeyWidget(Event, "code"),
-    )
+    """
+    Import/Export for the permanent Student database (per organization).
 
-    # Optional column in Excel (will be overridden for non-admin users)
+    Rules:
+    - Non-admin users: organization is forced to the logged-in user's organization
+      (ignores any value coming from Excel).
+    - We do NOT import sa_registration_no (auto-generated) or created_at.
+    - current_level must be between 1 and 10.
+    """
+
+    # Optional column in Excel: organization (name_en)
+    # For non-admin, this will be forced to user's org anyway.
     organization = fields.Field(
         column_name="organization",
         attribute="organization",
@@ -28,19 +32,18 @@ class StudentResource(resources.ModelResource):
         model = Student
 
         # CREATE-ONLY for schools:
-        import_id_fields = ()  # don't require sa_registration_no in the file
+        import_id_fields = ()  # do not require sa_registration_no in Excel
 
         # IMPORTANT: do NOT import sa_registration_no / created_at
         fields = (
-            "event",
             "organization",
             "first_name_en", "last_name_en",
             "first_name_ar", "last_name_ar",
             "date_of_birth", "gender",
             "guardian_name", "guardian_phone", "guardian_email",
-            "level",
+            "current_level",
+            "notes",
         )
-
         export_order = fields
 
     def _is_admin(self):
@@ -51,50 +54,41 @@ class StudentResource(resources.ModelResource):
 
     def before_import_row(self, row, **kwargs):
         """
-        Rules:
-        - Event code is required
-        - Non-admin: event must be OPEN
-        - Non-admin: force organization to user's organization (ignore Excel value)
+        Force organization for non-admin users.
+        Validate current_level.
         """
         if not self.user:
             return
 
         is_admin = self._is_admin()
-
-        event_code = (row.get("event_code") or "").strip()
-        if not event_code:
-            raise ValidationError("event_code is required.")
-
-        try:
-            ev = Event.objects.get(code=event_code)
-        except Event.DoesNotExist:
-            raise ValidationError(f"Event code '{event_code}' not found.")
-
-        if not is_admin and ev.status != "OPEN":
-            raise ValidationError(f"Event '{event_code}' is CLOSED. Registration not allowed.")
 
         # Force organization for non-admin imports
         if not is_admin and getattr(self.user, "organization_id", None):
             row["organization"] = self.user.organization.name_en
 
+        # Validate level if provided
+        lvl = row.get("current_level", None)
+        if lvl is not None and str(lvl).strip() != "":
+            try:
+                lvl_int = int(str(lvl).strip())
+            except ValueError:
+                raise ValidationError("current_level must be a number between 1 and 10.")
+
+            if lvl_int < 1 or lvl_int > 10:
+                raise ValidationError("current_level must be between 1 and 10.")
+
     def before_save_instance(self, instance, row, **kwargs):
         """
-        More rules:
-        - Non-admin: force organization
-        - ORG_STAFF cannot submit via Excel (force Draft)
-        - Non-admin cannot set Accepted/Rejected
+        Force organization again at save time for safety.
         """
         if not self.user:
             return
 
-        role = getattr(self.user, "role", "")
         is_admin = self._is_admin()
 
         if not is_admin and getattr(self.user, "organization_id", None):
             instance.organization = self.user.organization
 
-        if not is_admin and role == "ORG_STAFF":
-            instance.status = "DRAFT"
-
-        if not is_admin and instance.status in ("ACCEPTED", "REJECTED", "SUBMITTED"):
-            instance.status = "DRAFT"
+        # Extra safety: ensure correct range
+        if instance.current_level < 1 or instance.current_level > 10:
+            raise ValidationError("current_level must be between 1 and 10.")

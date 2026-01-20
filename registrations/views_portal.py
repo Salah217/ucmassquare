@@ -2,14 +2,26 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.core.paginator import Paginator
-from .models import Student, Event
-from .forms import StudentForm,StudentStep1Form, StudentStep2Form
-from datetime import date
+from django.db import transaction
+from django.urls import reverse
+from django.http import HttpResponseRedirect
 
 
+from .models import Student, Event, Course, CourseEnrollment, EventRegistration
+from .forms import (
+    StudentForm,
+    StudentStep1Form,
+    StudentStep2Form,
+    CourseRegisterForm,
+    CompetitionRegisterForm,
+)
 
+
+# ---------------------------
+# Role helpers
+# ---------------------------
 def is_admin(user):
     return user.is_superuser or getattr(user, "role", "") == "ADMIN"
 
@@ -17,6 +29,9 @@ def is_manager(user):
     return getattr(user, "role", "") == "ORG_MANAGER"
 
 
+# ---------------------------
+# Dashboard
+# ---------------------------
 @login_required
 def portal_dashboard(request):
     user = request.user
@@ -29,44 +44,53 @@ def portal_dashboard(request):
 
     org = user.organization
     today = timezone.localdate()
+
     open_events = (
-    Event.objects
-    .filter(status="OPEN")
-    .filter(Q(deadline__isnull=True) | Q(deadline__gte=today))
-    .order_by("deadline", "name")
-)
-
-    # KPI counts (scoped to this organization only)
-    counts = (
-        Student.objects.filter(organization=org)
-        .values("status")
-        .annotate(c=Count("id"))
+        Event.objects
+        .filter(status="OPEN")
+        .filter(Q(deadline__isnull=True) | Q(deadline__gte=today))
+        .order_by("deadline", "name")
     )
-    counts_map = {x["status"]: x["c"] for x in counts}
 
-    draft_count = counts_map.get("DRAFT", 0)
-    submitted_count = counts_map.get("SUBMITTED", 0)
-    accepted_count = counts_map.get("ACCEPTED", 0)
-    rejected_count = counts_map.get("REJECTED", 0)
+    total_students = Student.objects.filter(organization=org).count()
 
-    # Recent students (last 10)
+    # Optional: show some useful counts (safe even if you don't show yet in template)
+    active_courses = Course.objects.filter(is_active=True).count()
+    enrolled_count = CourseEnrollment.objects.filter(organization=org, status="ENROLLED").count()
+
+    regs_qs = EventRegistration.objects.filter(organization=org)
+    reg_draft = regs_qs.filter(status="DRAFT").count()
+    reg_pending_payment = regs_qs.filter(status="PENDING_PAYMENT").count()
+    reg_paid = regs_qs.filter(status="PAID").count()
+    reg_accepted = regs_qs.filter(status="ACCEPTED").count()
+
     recent_students = (
-        Student.objects.filter(organization=org)
-        .select_related("event")
+        Student.objects
+        .filter(organization=org)
         .order_by("-created_at")[:10]
     )
 
     return render(request, "portal/dashboard.html", {
-        "org_name": org.name_en,          # ✅ add this for the header text
+        "org_name": org.name_en,
         "open_events": open_events,
-        "draft_count": draft_count,
-        "submitted_count": submitted_count,
-        "accepted_count": accepted_count,
-        "rejected_count": rejected_count,
+        "total_students": total_students,
         "recent_students": recent_students,
+
+        # optional stats (if you want later)
+        "active_courses": active_courses,
+        "enrolled_count": enrolled_count,
+        "reg_draft": reg_draft,
+        "reg_pending_payment": reg_pending_payment,
+        "reg_paid": reg_paid,
+        "reg_accepted": reg_accepted,
+
+        "is_manager": is_manager(user),
     })
 
 
+# ---------------------------
+# Student list (permanent DB)
+# ---------------------------
 @login_required
 def student_list(request):
     user = request.user
@@ -77,18 +101,10 @@ def student_list(request):
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
 
-    qs = Student.objects.filter(organization=user.organization).select_related("event").order_by("-created_at")
+    qs = Student.objects.filter(organization=user.organization).order_by("-created_at")
 
-    # Filters
-    status = (request.GET.get("status") or "").strip()
-    event = (request.GET.get("event") or "").strip()
     q = (request.GET.get("q") or "").strip()
-
-    if status:
-        qs = qs.filter(status=status)
-
-    if event:
-        qs = qs.filter(event__code=event)
+    level = (request.GET.get("level") or "").strip()
 
     if q:
         qs = qs.filter(
@@ -101,292 +117,38 @@ def student_list(request):
             Q(guardian_name__icontains=q)
         )
 
-    # Event filter dropdown (OPEN events)
-    today = timezone.localdate()
-    open_events = (
-    Event.objects
-    .filter(status="OPEN")
-    .filter(Q(deadline__isnull=True) | Q(deadline__gte=today))
-    .order_by("deadline", "name")
-)
+    if level:
+        try:
+            qs = qs.filter(current_level=int(level))
+        except ValueError:
+            pass
 
-    # Pagination
     paginator = Paginator(qs, 50)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
+    page_obj = paginator.get_page(request.GET.get("page"))
 
     return render(request, "portal/student_list.html", {
-        "students": page_obj,            # now this is a Page object
+        "students": page_obj,
         "page_obj": page_obj,
-        "open_events": open_events,
-        "selected_status": status,
-        "selected_event": event,
         "q": q,
+        "selected_level": level,
         "is_manager": is_manager(user),
     })
 
-@login_required
-def submit_selected_confirm(request):
-    user = request.user
-    if is_admin(user):
-        return redirect("/admin/")
 
-    if not is_manager(user):
-        return render(request, "portal/forbidden.html", status=403)
-
-    if not user.organization_id:
-        return render(request, "portal/no_organization.html")
-
-    if request.method != "POST":
-        return redirect("portal_student_list")
-
-    event_code = (request.POST.get("event_code") or "").strip()
-    if not event_code:
-        messages.error(request, "Please filter by Event first, then select students to submit.")
-        return redirect("portal_student_list")
-    today = timezone.localdate()
-    event = get_object_or_404(
-        Event,
-        code=event_code,
-        status="OPEN",
-    )
-    if event.deadline and event.deadline < today:
-       messages.error(request, "This event deadline has passed. Please select another event.")
-       messages.error(request, "This event deadline has passed. Please select another event.")
-       return redirect(f"{redirect('portal_student_list').url}?event={event_code}")
-
-
-    selected_ids = request.POST.getlist("selected_ids")
-    if not selected_ids:
-        messages.warning(request, "No students selected.")
-        return redirect(f"{redirect('portal_student_list').url}?event={event_code}")
-
-    # Only allow submitting DRAFT students belonging to this org and event
-    qs = Student.objects.filter(
-        id__in=selected_ids,
-        organization=user.organization,
-        event=event,
-        status="DRAFT",
-    ).order_by("-created_at")
-
-    count = qs.count()
-    if count == 0:
-        messages.warning(request, "Selected students are not Draft (or not in this event). Nothing to submit.")
-        return redirect("portal_student_list")
-
-    return render(request, "portal/submit_selected_confirm.html", {
-        "event": event,
-        "draft_count": count,
-        "students": qs[:50],   # show up to 50 in preview
-        "selected_ids": list(qs.values_list("id", flat=True)),
-    })
-
-
-@login_required
-def submit_selected_final(request):
-    user = request.user
-    if is_admin(user):
-        return redirect("/admin/")
-
-    if not is_manager(user):
-        return render(request, "portal/forbidden.html", status=403)
-
-    if not user.organization_id:
-        return render(request, "portal/no_organization.html")
-
-    if request.method != "POST":
-        return redirect("portal_student_list")
-
-    event_code = (request.POST.get("event_code") or "").strip()
-    today = timezone.localdate()
-    event = get_object_or_404(
-        Event,
-        code=event_code,
-        status="OPEN",
-    )
-    if event.deadline and event.deadline < today:
-       messages.error(request, "This event deadline has passed. Please select another event.")
-       messages.error(request, "This event deadline has passed. Please select another event.")
-       return redirect(f"{redirect('portal_student_list').url}?event={event_code}")
-
-
-    selected_ids = request.POST.getlist("selected_ids")
-    if not selected_ids:
-        messages.warning(request, "No students selected.")
-        return redirect("portal_student_list")
-
-    qs = Student.objects.filter(
-        id__in=selected_ids,
-        organization=user.organization,
-        event=event,
-        status="DRAFT",
-    )
-
-    count = qs.count()
-    if count == 0:
-        messages.warning(request, "No Draft students found to submit.")
-        return redirect("portal_student_list")
-
-    now = timezone.now()
-    qs.update(status="SUBMITTED", submitted_at=now, submitted_by=user)
-    messages.success(request, f"Submitted {count} student(s) for {event.code}.")
-    return redirect(f"{redirect('portal_student_list').url}?event={event.code}&status=SUBMITTED")
-
-@login_required
-def student_create(request):
-    user = request.user
-    if is_admin(user):
-        return redirect("/admin/")
-
-    if not user.organization_id:
-        return render(request, "portal/no_organization.html")
-
-    if request.method == "POST":
-        form = StudentForm(request.POST, user=user)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            obj.organization = user.organization  # force bind
-            obj.status = "DRAFT"  # always draft on create
-            obj.save()
-            messages.success(request, "Student saved as Draft.")
-            return redirect("portal_student_list")
-    else:
-        form = StudentForm(user=user)
-
-    return render(request, "portal/student_form.html", {"form": form, "mode": "create"})
-
-
-@login_required
-def student_edit(request, pk):
-    user = request.user
-    if is_admin(user):
-        return redirect("/admin/")
-
-    obj = get_object_or_404(Student, pk=pk)
-
-    # Security: must be same organization
-    if not user.organization_id or obj.organization_id != user.organization_id:
-        return render(request, "portal/forbidden.html", status=403)
-
-    if obj.status == "SUBMITTED":
-        messages.warning(request, "This student is submitted and cannot be edited.")
-        return redirect("portal_student_list")
-
-    if request.method == "POST":
-        form = StudentForm(request.POST, instance=obj, user=user)
-        if form.is_valid():
-            updated = form.save(commit=False)
-            updated.organization = user.organization  # force bind
-            updated.status = "DRAFT"  # keep draft
-            updated.save()
-            messages.success(request, "Student updated.")
-            return redirect("portal_student_list")
-    else:
-        form = StudentForm(instance=obj, user=user)
-
-    return render(request, "portal/student_form.html", {"form": form, "mode": "edit", "obj": obj})
-
-
-@login_required
-def submit_students(request):
-    user = request.user
-    if is_admin(user):
-        return redirect("/admin/")
-
-    if not is_manager(user):
-        return render(request, "portal/forbidden.html", status=403)
-
-    if not user.organization_id:
-        return render(request, "portal/no_organization.html")
-    today = timezone.localdate()
-    open_events = (
-    Event.objects
-    .filter(status="OPEN")
-    .filter(Q(deadline__isnull=True) | Q(deadline__gte=today))
-    .order_by("deadline", "name")
-)
-
-    # Step 1: show submit page (event selection)
-    return render(request, "portal/submit.html", {
-        "open_events": open_events,
-    })
-
-
-@login_required
-def submit_confirm(request):
-    user = request.user
-    if is_admin(user):
-        return redirect("/admin/")
-
-    if not is_manager(user):
-        return render(request, "portal/forbidden.html", status=403)
-
-    if not user.organization_id:
-        return render(request, "portal/no_organization.html")
-
-    if request.method != "POST":
-        return redirect("portal_submit")
-
-    event_code = (request.POST.get("event_code") or "").strip()
-    if not event_code:
-        messages.error(request, "Please select an event.")
-        return redirect("portal_submit")
-    today = timezone.localdate()
-    event = get_object_or_404(
-        Event,
-        code=event_code,
-        status="OPEN",
-    )
-    if event.deadline and event.deadline < today:
-       messages.error(request, "This event deadline has passed. Please select another event.")
-       return redirect("portal_submit")
-
-    draft_qs = Student.objects.filter(
-        organization=user.organization,
-        event=event,
-        status="DRAFT",
-    )
-
-    draft_count = draft_qs.count()
-
-    # If manager clicked FINAL confirm
-    if request.POST.get("final") == "1":
-        if draft_count == 0:
-            messages.warning(request, "No Draft students to submit for this event.")
-            return redirect("portal_submit")
-
-        now = timezone.now()
-        draft_qs.update(status="SUBMITTED", submitted_at=now, submitted_by=user)
-        messages.success(request, f"Submitted {draft_count} student(s) for {event.code}.")
-        return redirect("portal_student_list")
-
-    # Otherwise: show confirmation page
-    sample_students = draft_qs.order_by("-created_at")[:10]
-
-    return render(request, "portal/submit_confirm.html", {
-        "event": event,
-        "draft_count": draft_count,
-        "sample_students": sample_students,
-    })
-
-
-
-
+# =========================================================
+# STUDENT WIZARD (Create/Edit)
+# =========================================================
 WIZ_KEY_CREATE = "student_wizard_create"
 WIZ_KEY_EDIT_PREFIX = "student_wizard_edit_"  # + pk
-
 
 def _wizard_key(pk=None):
     return WIZ_KEY_CREATE if pk is None else f"{WIZ_KEY_EDIT_PREFIX}{pk}"
 
-
 def _wizard_reset(request, pk=None):
     request.session.pop(_wizard_key(pk), None)
 
-
 def _wizard_get(request, pk=None):
     return request.session.get(_wizard_key(pk), {})
-
 
 def _wizard_set(request, data, pk=None):
     request.session[_wizard_key(pk)] = data
@@ -396,16 +158,13 @@ def _wizard_set(request, data, pk=None):
 @login_required
 def student_wizard_start(request):
     user = request.user
-
     if is_admin(user):
         return redirect("/admin/")
-
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
 
     _wizard_reset(request, pk=None)
     return redirect("portal_student_wizard_step1")
-
 
 
 @login_required
@@ -418,59 +177,47 @@ def student_wizard_step1(request, pk=None):
 
     instance = None
     if pk:
-        instance = get_object_or_404(Student, pk=pk)
-        if instance.organization_id != user.organization_id:
-            return render(request, "portal/forbidden.html", status=403)
-        if instance.status == "SUBMITTED":
-            messages.warning(request, "This student is submitted and cannot be edited.")
-            return redirect("portal_student_list")
+        instance = get_object_or_404(Student, pk=pk, organization=user.organization)
 
     wiz = _wizard_get(request, pk=pk)
 
-    # If editing and wizard empty, preload from DB
+    # Preload when editing
     if pk and not wiz:
         wiz = {
-            "event_id": instance.event_id,
-            "level": instance.level,
             "first_name_en": instance.first_name_en,
             "last_name_en": instance.last_name_en,
             "first_name_ar": instance.first_name_ar,
             "last_name_ar": instance.last_name_ar,
             "date_of_birth": instance.date_of_birth.isoformat(),
             "gender": instance.gender,
+            "current_level": instance.current_level,
         }
         _wizard_set(request, wiz, pk=pk)
 
-    initial = {}
-    if wiz:
-        initial = {
-            "event": wiz.get("event_id"),
-            "level": wiz.get("level"),
-            "first_name_en": wiz.get("first_name_en"),
-            "last_name_en": wiz.get("last_name_en"),
-            "first_name_ar": wiz.get("first_name_ar"),
-            "last_name_ar": wiz.get("last_name_ar"),
-            "date_of_birth": wiz.get("date_of_birth"),
-            "gender": wiz.get("gender"),
-        }
+    initial = {
+        "first_name_en": wiz.get("first_name_en", ""),
+        "last_name_en": wiz.get("last_name_en", ""),
+        "first_name_ar": wiz.get("first_name_ar", ""),
+        "last_name_ar": wiz.get("last_name_ar", ""),
+        "date_of_birth": wiz.get("date_of_birth", ""),
+        "gender": wiz.get("gender", ""),
+        "current_level": wiz.get("current_level", 1),
+    }
 
     if request.method == "POST":
         form = StudentStep1Form(request.POST, user=user)
         if form.is_valid():
             cd = form.cleaned_data
             wiz.update({
-                "event_id": cd["event"].id,
-                "level": cd.get("level", ""),
                 "first_name_en": cd["first_name_en"],
                 "last_name_en": cd["last_name_en"],
                 "first_name_ar": cd.get("first_name_ar", ""),
                 "last_name_ar": cd.get("last_name_ar", ""),
                 "date_of_birth": cd["date_of_birth"].isoformat(),
                 "gender": cd["gender"],
+                "current_level": cd["current_level"],
             })
             _wizard_set(request, wiz, pk=pk)
-
-            # ✅ FIX (ONLY CHANGE): pass pk when redirecting to the edit URL
             return redirect("portal_student_wizard_step2_edit", pk=pk) if pk else redirect("portal_student_wizard_step2")
     else:
         form = StudentStep1Form(initial=initial, user=user)
@@ -493,17 +240,15 @@ def student_wizard_step2(request, pk=None):
 
     instance = None
     if pk:
-        instance = get_object_or_404(Student, pk=pk)
-        if instance.organization_id != user.organization_id:
-            return render(request, "portal/forbidden.html", status=403)
+        instance = get_object_or_404(Student, pk=pk, organization=user.organization)
 
     wiz = _wizard_get(request, pk=pk)
 
-    # guard: must have step1 data
-    if not wiz.get("event_id"):
+    # Guard
+    if not wiz.get("first_name_en"):
         return redirect("portal_student_wizard_step1_edit", pk=pk) if pk else redirect("portal_student_wizard_step1")
 
-    # preload step2 from DB if editing and missing
+    # Preload when editing
     if pk and ("guardian_name" not in wiz):
         wiz.update({
             "guardian_name": instance.guardian_name,
@@ -532,7 +277,6 @@ def student_wizard_step2(request, pk=None):
             })
             _wizard_set(request, wiz, pk=pk)
             return redirect("portal_student_wizard_review_edit", pk=pk) if pk else redirect("portal_student_wizard_review")
-
     else:
         form = StudentStep2Form(initial=initial, user=user)
 
@@ -554,52 +298,38 @@ def student_wizard_review(request, pk=None):
 
     instance = None
     if pk:
-        instance = get_object_or_404(Student, pk=pk)
-        if instance.organization_id != user.organization_id:
-            return render(request, "portal/forbidden.html", status=403)
+        instance = get_object_or_404(Student, pk=pk, organization=user.organization)
 
     wiz = _wizard_get(request, pk=pk)
-    if not wiz.get("event_id") or not wiz.get("guardian_name"):
-     return redirect("portal_student_wizard_step1_edit", pk=pk) if pk else redirect("portal_student_wizard_step1")
-
-
-    event = get_object_or_404(Event, id=wiz["event_id"])
+    if not wiz.get("first_name_en") or not wiz.get("guardian_name"):
+        return redirect("portal_student_wizard_step1_edit", pk=pk) if pk else redirect("portal_student_wizard_step1")
 
     if request.method == "POST":
-        # Final Save
-        if pk:
-            obj = instance
-        else:
-            obj = Student(organization=user.organization, status="DRAFT")
+        obj = instance if pk else Student(organization=user.organization)
 
-        obj.event = event
-        obj.level = wiz.get("level", "")
         obj.first_name_en = wiz["first_name_en"]
         obj.last_name_en = wiz["last_name_en"]
         obj.first_name_ar = wiz.get("first_name_ar", "")
         obj.last_name_ar = wiz.get("last_name_ar", "")
-
-        from datetime import date
-        obj.date_of_birth = date.fromisoformat(wiz["date_of_birth"])
-
+        obj.date_of_birth = timezone.datetime.fromisoformat(wiz["date_of_birth"]).date()
         obj.gender = wiz["gender"]
+        obj.current_level = int(wiz.get("current_level", 1))
+
         obj.guardian_name = wiz["guardian_name"]
         obj.guardian_phone = wiz["guardian_phone"]
         obj.guardian_email = wiz.get("guardian_email", "")
         obj.notes = wiz.get("notes", "")
 
-        obj.status = "DRAFT"
         obj.save()
 
         _wizard_reset(request, pk=pk)
-        messages.success(request, "Student saved as Draft.")
+        messages.success(request, "Student saved successfully.")
         return redirect("portal_student_list")
 
     return render(request, "portal/student_wizard_review.html", {
         "mode": "edit" if pk else "create",
         "pk": pk,
         "step": 3,
-        "event": event,
         "wiz": wiz,
     })
 
@@ -609,3 +339,255 @@ def student_wizard_cancel(request, pk=None):
     _wizard_reset(request, pk=pk)
     messages.info(request, "Wizard cancelled.")
     return redirect("portal_student_list")
+
+
+# =========================================================
+# COURSE REGISTRATION (CourseEnrollment)
+# =========================================================
+@login_required
+def course_register(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    form = CourseRegisterForm(user=user)
+    students = Student.objects.filter(organization=user.organization).order_by("-created_at")
+
+    return render(request, "portal/course_register.html", {
+        "form": form,
+        "students": students[:200],  # keep light (you can paginate later)
+        "org_name": user.organization.name_en,
+    })
+
+
+@login_required
+def course_register_confirm(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    if request.method != "POST":
+        return redirect("portal_course_register")
+
+    form = CourseRegisterForm(request.POST, user=user)
+    selected_ids = request.POST.getlist("selected_ids")
+
+    if not form.is_valid():
+        students = Student.objects.filter(organization=user.organization).order_by("-created_at")[:200]
+        return render(request, "portal/course_register.html", {
+            "form": form,
+            "students": students,
+            "org_name": user.organization.name_en,
+        })
+
+    if not selected_ids:
+        messages.warning(request, "Please select at least one student.")
+        return redirect("portal_course_register")
+
+    course = form.cleaned_data["course"]
+
+    students = Student.objects.filter(
+        organization=user.organization,
+        id__in=selected_ids
+    ).order_by("first_name_en", "last_name_en")
+
+    if students.count() == 0:
+        messages.warning(request, "No valid students selected.")
+        return redirect("portal_course_register")
+
+    created = 0
+    with transaction.atomic():
+        for s in students:
+            _, was_created = CourseEnrollment.objects.get_or_create(
+                organization=user.organization,
+                student=s,
+                course=course,
+                defaults={"created_by": user, "status": "ENROLLED"},
+            )
+            if was_created:
+                created += 1
+
+    messages.success(request, f"Enrolled {created} student(s) in {course}.")
+    return render(request, "portal/course_register_confirm.html", {
+        "course": course,
+        "students": students,
+        "created_count": created,
+    })
+
+
+# =========================================================
+# COMPETITION REGISTRATION (EventRegistration)
+# =========================================================
+@login_required
+def competition_register(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    form = CompetitionRegisterForm(user=user)
+    students = Student.objects.filter(organization=user.organization).order_by("-created_at")
+
+    return render(request, "portal/competition_register.html", {
+        "form": form,
+        "students": students[:200],
+        "org_name": user.organization.name_en,
+        "is_manager": is_manager(user),
+    })
+
+
+@login_required
+def competition_register_confirm(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    if request.method != "POST":
+        return redirect("portal_competition_register")
+
+    form = CompetitionRegisterForm(request.POST, user=user)
+    selected_ids = request.POST.getlist("selected_ids")
+
+    if not form.is_valid():
+        students = Student.objects.filter(organization=user.organization).order_by("-created_at")[:200]
+        return render(request, "portal/competition_register.html", {
+            "form": form,
+            "students": students,
+            "org_name": user.organization.name_en,
+            "is_manager": is_manager(user),
+        })
+
+    if not selected_ids:
+        messages.warning(request, "Please select at least one student.")
+        return redirect("portal_competition_register")
+
+    event = form.cleaned_data["event"]
+
+    students = Student.objects.filter(
+        organization=user.organization,
+        id__in=selected_ids
+    ).order_by("first_name_en", "last_name_en")
+
+    if students.count() == 0:
+        messages.warning(request, "No valid students selected.")
+        return redirect("portal_competition_register")
+
+    fee_per_student = event.fee_per_student or 0
+    total_fee = fee_per_student * students.count()
+
+    created = 0
+    with transaction.atomic():
+        for s in students:
+            _, was_created = EventRegistration.objects.get_or_create(
+                organization=user.organization,
+                event=event,
+                student=s,
+                defaults={
+                    "status": "DRAFT",
+                    "fee_amount": fee_per_student,  # snapshot
+                }
+            )
+            if was_created:
+                created += 1
+
+    return render(request, "portal/competition_register_confirm.html", {
+        "event": event,
+        "students": students,
+        "created_count": created,
+        "fee_per_student": fee_per_student,
+        "total_fee": total_fee,
+        "is_manager": is_manager(user),
+    })
+@login_required
+def competition_submit_confirm(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not is_manager(user):
+        return render(request, "portal/forbidden.html", status=403)
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    event_id = request.GET.get("event_id") or request.POST.get("event_id")
+    if not event_id:
+        messages.warning(request, "Missing event_id.")
+        return redirect("portal_dashboard")
+
+    event = get_object_or_404(Event, pk=event_id)
+
+    regs = (
+        EventRegistration.objects
+        .filter(organization=user.organization, event=event, status="DRAFT")
+        .select_related("student")
+        .order_by("-created_at")
+    )
+
+    count = regs.count()
+    fee_per_student = event.fee_per_student or 0
+    total_amount = fee_per_student * count
+
+    return render(request, "portal/competition_submit_confirm.html", {
+        "event": event,
+        "regs": regs,
+        "count": count,
+        "fee_per_student": fee_per_student,
+        "total_amount": total_amount,
+    })
+
+
+@login_required
+def competition_submit_final(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not is_manager(user):
+        return render(request, "portal/forbidden.html", status=403)
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    if request.method != "POST":
+        return redirect("portal_dashboard")
+
+    event_id = request.POST.get("event_id")
+    selected_ids = request.POST.getlist("selected_ids")
+
+    if not event_id:
+        messages.warning(request, "Missing event_id.")
+        return redirect("portal_dashboard")
+
+    event = get_object_or_404(Event, pk=event_id)
+
+    if not selected_ids:
+        messages.warning(request, "Please select at least one draft registration.")
+        return redirect("portal_competition_submit_confirm") + f"?event_id={event.id}"
+
+    now = timezone.now()
+    fee_per_student = event.fee_per_student or 0
+
+    qs = EventRegistration.objects.filter(
+        id__in=selected_ids,
+        organization=user.organization,
+        event=event,
+        status="DRAFT",
+    )
+
+    with transaction.atomic():
+        updated = qs.update(
+            status="PENDING_PAYMENT",
+            fee_amount=fee_per_student,
+            submitted_at=now,
+            submitted_by=user,
+        )
+
+    messages.success(
+        request,
+        f"Submitted {updated} registration(s). Total due: {fee_per_student * updated:.2f} SAR."
+    )
+    return redirect("portal_dashboard")

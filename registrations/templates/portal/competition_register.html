@@ -1,0 +1,106 @@
+{% extends "portal/layout.html" %}
+{% block title %}Register in Competition | UCMAS{% endblock %}
+
+{% block content %}
+
+<div class="page-header d-print-none mb-4">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Register Students in a Competition</h2>
+      <div class="text-muted mt-1">
+        Select a competition, then choose students from your database.
+      </div>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="{% url 'portal_competition_register_confirm' %}">
+  {% csrf_token %}
+
+  <!-- Competition selector -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3 class="card-title">Step 1 — Select Competition</h3>
+    </div>
+    <div class="card-body">
+      <div class="mb-3">
+        {{ form.event.label_tag }}
+        {{ form.event }}
+        {% if form.event.errors %}
+          <div class="text-danger small mt-1">
+            {{ form.event.errors }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Students selection -->
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Step 2 — Select Students</h3>
+      <div class="text-muted">
+        Choose one or more students to register in this competition.
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table">
+        <thead>
+          <tr>
+            <th class="w-1">
+              <input type="checkbox" id="check-all">
+            </th>
+            <th>Registration No</th>
+            <th>Student</th>
+            <th>Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td>
+              <input type="checkbox" name="selected_ids" value="{{ s.id }}" class="form-check-input student-check">
+            </td>
+            <td class="text-muted">{{ s.sa_registration_no }}</td>
+            <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
+            <td>
+              <span class="badge bg-blue-lt">Level {{ s.current_level }}</span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-4">
+              No students found in your database.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-secondary">
+        Cancel
+      </a>
+      <button type="submit" class="btn btn-primary">
+        Create Draft Registrations
+      </button>
+    </div>
+  </div>
+
+</form>
+
+<!-- Select all script -->
+<script>
+  const checkAll = document.getElementById("check-all");
+  const checks = document.querySelectorAll(".student-check");
+
+  if (checkAll) {
+    checkAll.addEventListener("change", function () {
+      checks.forEach(cb => cb.checked = this.checked);
+    });
+  }
+</script>
+
+{% endblock %}

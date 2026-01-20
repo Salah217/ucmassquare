@@ -1,0 +1,88 @@
+{% extends "portal/layout.html" %}
+{% block title %}Register Course | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Register in a Course</h2>
+      <div class="text-muted mt-1">Choose a course then select students from your database.</div>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="{% url 'portal_course_register_confirm' %}">
+  {% csrf_token %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+          <label class="form-label">Course</label>
+          {{ form.course }}
+        </div>
+        <div class="col-md-6 text-muted">
+          Tip: You can enroll many students at once.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title mb-0">Select Students</h3>
+      <div class="card-actions">
+        <label class="form-check">
+          <input class="form-check-input" type="checkbox" id="check-all">
+          <span class="form-check-label">Select all</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table">
+        <thead>
+          <tr>
+            <th class="w-1"></th>
+            <th>Registration No</th>
+            <th>Student</th>
+            <th>Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr>
+            <td>
+              <input class="form-check-input row-check" type="checkbox" name="selected_ids" value="{{ s.id }}">
+            </td>
+            <td class="text-muted">{{ s.sa_registration_no }}</td>
+            <td>
+              <div class="fw-bold">{{ s.first_name_en }} {{ s.last_name_en }}</div>
+              <div class="text-muted small">Guardian: {{ s.guardian_name }} · {{ s.guardian_phone }}</div>
+            </td>
+            <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-4">No students found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer d-flex justify-content-end">
+      <button type="submit" class="btn btn-primary">Enroll selected students</button>
+    </div>
+  </div>
+</form>
+
+<script>
+  const checkAll = document.getElementById("check-all");
+  if (checkAll) {
+    checkAll.addEventListener("change", function () {
+      document.querySelectorAll(".row-check").forEach(cb => cb.checked = checkAll.checked);
+    });
+  }
+</script>
+{% endblock %}
