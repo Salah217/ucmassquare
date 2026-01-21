@@ -26,24 +26,16 @@ urlpatterns = [
     path("students/<int:pk>/wizard/review/", v.student_wizard_review, name="portal_student_wizard_review_edit"),
     path("students/<int:pk>/wizard/cancel/", v.student_wizard_cancel, name="portal_student_wizard_cancel_edit"),
 
-    # ✅ NEW: Course registration
+    # Course registration
     path("courses/register/", v.course_register, name="portal_course_register"),
     path("courses/register/confirm/", v.course_register_confirm, name="portal_course_register_confirm"),
 
-    # ✅ NEW: Competition registration (EventRegistration)
+    # Competition registration
     path("competitions/register/", v.competition_register, name="portal_competition_register"),
     path("competitions/register/confirm/", v.competition_register_confirm, name="portal_competition_register_confirm"),
 
-    # ✅ NEW: Manager submit + payment step (Tabby later)
+    # Manager submit + payment step
     path("competitions/submit/confirm/", v.competition_submit_confirm, name="portal_competition_submit_confirm"),
     path("competitions/submit/final/", v.competition_submit_final, name="portal_competition_submit_final"),
-
-        # NEW: Course Registration (from Student DB)
-    path("courses/register/", v.course_register, name="portal_course_register"),
-    path("courses/register/confirm/", v.course_register_confirm, name="portal_course_register_confirm"),
-
-    # NEW: Competition Registration (from Student DB)
-    path("competitions/register/", v.competition_register, name="portal_competition_register"),
-    path("competitions/register/confirm/", v.competition_register_confirm, name="portal_competition_register_confirm"),
-
 ]
+
