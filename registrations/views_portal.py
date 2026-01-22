@@ -32,60 +32,49 @@ def is_manager(user):
 # ---------------------------
 # Dashboard
 # ---------------------------
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+
 @login_required
 def portal_dashboard(request):
-    user = request.user
+    org = getattr(request.user, "organization", None)
+    today = timezone.now().date()
 
-    if is_admin(user):
-        return redirect("/admin/")
+    # ---- OPEN COURSES ----
+    # Change these fields to match your model (examples below)
+    open_courses = Course.objects.filter(is_active=True)
+    # Optional: if courses are organization-specific
+    # if org:
+    #     open_courses = open_courses.filter(organization=org)
 
-    if not user.organization_id:
-        return render(request, "portal/no_organization.html")
+    # If you have registration window:
+    # open_courses = open_courses.filter(reg_open_date__lte=today, reg_close_date__gte=today)
 
-    org = user.organization
-    today = timezone.localdate()
+    open_courses = open_courses.order_by("start_date")[:6]
 
-    open_events = (
-        Event.objects
-        .filter(status="OPEN")
-        .filter(Q(deadline__isnull=True) | Q(deadline__gte=today))
-        .order_by("deadline", "name")
-    )
+    # ---- OPEN COMPETITIONS / EVENTS ----
+    open_events = Event.objects.filter(is_active=True)
+    # Optional:
+    # if org:
+    #     open_events = open_events.filter(organization=org)
 
-    total_students = Student.objects.filter(organization=org).count()
+    # If you have registration window:
+    # open_events = open_events.filter(reg_open_date__lte=today, reg_close_date__gte=today)
 
-    # Optional: show some useful counts (safe even if you don't show yet in template)
-    active_courses = Course.objects.filter(is_active=True).count()
-    enrolled_count = CourseEnrollment.objects.filter(organization=org, status="ENROLLED").count()
+    open_events = open_events.order_by("event_date")[:6]
 
-    regs_qs = EventRegistration.objects.filter(organization=org)
-    reg_draft = regs_qs.filter(status="DRAFT").count()
-    reg_pending_payment = regs_qs.filter(status="PENDING_PAYMENT").count()
-    reg_paid = regs_qs.filter(status="PAID").count()
-    reg_accepted = regs_qs.filter(status="ACCEPTED").count()
+    # ---- IMPORTANT NOTICES ----
+    notices = Notice.objects.filter(is_active=True).order_by("-created_at")[:5]
 
-    recent_students = (
-        Student.objects
-        .filter(organization=org)
-        .order_by("-created_at")[:10]
-    )
-
-    return render(request, "portal/dashboard.html", {
-        "org_name": org.name_en,
+    ctx = {
+        "org": org,
+        "open_courses": open_courses,
         "open_events": open_events,
-        "total_students": total_students,
-        "recent_students": recent_students,
-
-        # optional stats (if you want later)
-        "active_courses": active_courses,
-        "enrolled_count": enrolled_count,
-        "reg_draft": reg_draft,
-        "reg_pending_payment": reg_pending_payment,
-        "reg_paid": reg_paid,
-        "reg_accepted": reg_accepted,
-
-        "is_manager": is_manager(user),
-    })
+        "notices": notices,
+        "open_courses_count": open_courses.count() if hasattr(open_courses, "count") else len(open_courses),
+        "open_events_count": open_events.count() if hasattr(open_events, "count") else len(open_events),
+    }
+    return render(request, "portal/dashboard.html", ctx)
 
 
 # ---------------------------
@@ -406,7 +395,7 @@ def course_register_confirm(request):
                 organization=user.organization,
                 student=s,
                 course=course,
-                defaults={"created_by": user, "status": "ENROLLED"},
+                defaults={"created_by": user, "status": "DRAFT"},
             )
             if was_created:
                 created += 1
@@ -416,6 +405,7 @@ def course_register_confirm(request):
         "course": course,
         "students": students,
         "created_count": created,
+        "is_manager": is_manager(user),   # ← ADD THIS LINE HERE
     })
 
 
