@@ -53,7 +53,12 @@ def portal_dashboard(request):
     open_courses = open_courses.order_by("start_date")[:6]
 
     # ---- OPEN COMPETITIONS / EVENTS ----
-    open_events = Event.objects.filter(is_active=True)
+    today = timezone.now().date()
+    open_events = Event.objects.filter(
+       status="OPEN",
+       deadline__gte=today
+    ).order_by("deadline")[:6]
+
     # Optional:
     # if org:
     #     open_events = open_events.filter(organization=org)
