@@ -153,19 +153,55 @@ class Course(models.Model):
 
 class CourseEnrollment(models.Model):
     STATUS = [
+        ("DRAFT", "Draft"),
+        ("SUBMITTED", "Submitted"),
+        ("ACCEPTED", "Accepted"),
+        ("REJECTED", "Rejected"),
+        ("PENDING_PAYMENT", "Pending Payment"),
+        ("PAID", "Paid"),
         ("ENROLLED", "Enrolled"),
         ("COMPLETED", "Completed"),
         ("DROPPED", "Dropped"),
     ]
 
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="course_enrollments")
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="course_enrollments")
-    course = models.ForeignKey(Course, on_delete=models.PROTECT, related_name="enrollments")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="course_enrollments"
+    )
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name="course_enrollments"
+    )
+    course = models.ForeignKey(
+        Course, on_delete=models.PROTECT, related_name="enrollments"
+    )
 
-    status = models.CharField(max_length=20, choices=STATUS, default="ENROLLED")
+    status = models.CharField(max_length=20, choices=STATUS, default="DRAFT")
 
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
+    )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="submitted_course_enrollments",
+    )
+
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_course_enrollments",
+    )
+
+    rejection_reason = models.CharField(max_length=255, blank=True)
+
+    invoice_no = models.CharField(max_length=50, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_ref = models.CharField(max_length=100, blank=True)
 
     class Meta:
         constraints = [

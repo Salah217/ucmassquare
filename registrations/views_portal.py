@@ -342,7 +342,7 @@ def course_register(request):
 
     return render(request, "portal/course_register.html", {
         "form": form,
-        "students": students[:200],  # keep light (you can paginate later)
+        "students": students[:200],
         "org_name": user.organization.name_en,
     })
 
@@ -380,10 +380,6 @@ def course_register_confirm(request):
         id__in=selected_ids
     ).order_by("first_name_en", "last_name_en")
 
-    if students.count() == 0:
-        messages.warning(request, "No valid students selected.")
-        return redirect("portal_course_register")
-
     created = 0
     with transaction.atomic():
         for s in students:
@@ -396,14 +392,13 @@ def course_register_confirm(request):
             if was_created:
                 created += 1
 
-    messages.success(request, f"Enrolled {created} student(s) in {course}.")
+    messages.success(request, f"Added {created} student(s) to {course} as Draft.")
     return render(request, "portal/course_register_confirm.html", {
         "course": course,
         "students": students,
         "created_count": created,
-        "is_manager": is_manager(user),   # ← ADD THIS LINE HERE
+        "is_manager": is_manager(user),
     })
-
 
 # =========================================================
 # COMPETITION REGISTRATION (EventRegistration)
