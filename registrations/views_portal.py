@@ -32,8 +32,6 @@ def is_manager(user):
 # ---------------------------
 # Dashboard
 # ---------------------------
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
 @login_required
 def portal_dashboard(request):
     org = getattr(request.user, "organization", None)
