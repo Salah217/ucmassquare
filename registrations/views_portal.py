@@ -34,50 +34,41 @@ def is_manager(user):
 # ---------------------------
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-
 @login_required
 def portal_dashboard(request):
     org = getattr(request.user, "organization", None)
     today = timezone.now().date()
 
     # ---- OPEN COURSES ----
-    # Change these fields to match your model (examples below)
-    open_courses = Course.objects.filter(is_active=True)
-    # Optional: if courses are organization-specific
-    # if org:
-    #     open_courses = open_courses.filter(organization=org)
+    open_courses = (
+        Course.objects
+        .filter(is_active=True)
+        .order_by("start_date", "-created_at")
+    )[:6]
 
-    # If you have registration window:
-    # open_courses = open_courses.filter(reg_open_date__lte=today, reg_close_date__gte=today)
-
-    open_courses = open_courses.order_by("start_date")[:6]
-
-    # ---- OPEN COMPETITIONS / EVENTS ----
-    today = timezone.now().date()
-    open_events = Event.objects.filter(
-       status="OPEN",
-       deadline__gte=today
-    ).order_by("deadline")[:6]
-
-    # Optional:
-    # if org:
-    #     open_events = open_events.filter(organization=org)
-
-    # If you have registration window:
-    # open_events = open_events.filter(reg_open_date__lte=today, reg_close_date__gte=today)
-
-    open_events = open_events.order_by("event_date")[:6]
+    # ---- OPEN EVENTS ----
+    # Your Event model DOES NOT have event_date (based on Render error).
+    # So order by deadline (and show upcoming).
+    open_events = (
+        Event.objects
+        .filter(status="OPEN", deadline__gte=today)
+        .order_by("deadline", "-created_at")
+    )[:6]
 
     # ---- IMPORTANT NOTICES ----
-    notices = Notice.objects.filter(is_active=True).order_by("-created_at")[:5]
+    # If you don't have Notice model, keep notices empty to avoid 500.
+    notices = []
+    # If you DO have Notice model, uncomment these 2 lines:
+    # from .models import Notice
+    # notices = Notice.objects.filter(is_active=True).order_by("-created_at")[:5]
 
     ctx = {
         "org": org,
         "open_courses": open_courses,
         "open_events": open_events,
         "notices": notices,
-        "open_courses_count": open_courses.count() if hasattr(open_courses, "count") else len(open_courses),
-        "open_events_count": open_events.count() if hasattr(open_events, "count") else len(open_events),
+        "open_courses_count": len(open_courses),
+        "open_events_count": len(open_events),
     }
     return render(request, "portal/dashboard.html", ctx)
 
