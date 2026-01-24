@@ -399,7 +399,105 @@ def course_register_confirm(request):
         "created_count": created,
         "is_manager": is_manager(user),
     })
+# ====== ADD/VERIFY IMPORTS AT TOP of views_portal.py ======
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
 
+# make sure these are already imported in your file:
+# from .models import Course, CourseEnrollment
+# from .helpers import is_admin, is_manager   (or wherever you defined them)
+
+
+# =========================================================
+# COURSE MANAGER SUBMIT (CourseEnrollment workflow)
+# =========================================================
+
+@login_required
+def course_submit_confirm(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not is_manager(user):
+        return render(request, "portal/forbidden.html", status=403)
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    course_id = request.GET.get("course_id") or request.POST.get("course_id")
+    if not course_id:
+        messages.warning(request, "Missing course_id.")
+        return redirect("portal_dashboard")
+
+    course = get_object_or_404(Course, pk=course_id)
+
+    regs = (
+        CourseEnrollment.objects
+        .filter(organization=user.organization, course=course, status="DRAFT")
+        .select_related("student")
+        .order_by("-created_at")
+    )
+
+    count = regs.count()
+    fee_per_student = course.fee or 0
+    total_amount = fee_per_student * count
+
+    return render(request, "portal/course_submit_confirm.html", {
+        "course": course,
+        "regs": regs,
+        "count": count,
+        "fee_per_student": fee_per_student,
+        "total_amount": total_amount,
+    })
+
+
+@login_required
+def course_submit_final(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not is_manager(user):
+        return render(request, "portal/forbidden.html", status=403)
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    if request.method != "POST":
+        return redirect("portal_dashboard")
+
+    course_id = request.POST.get("course_id")
+    selected_ids = request.POST.getlist("selected_ids")
+
+    if not course_id:
+        messages.warning(request, "Missing course_id.")
+        return redirect("portal_dashboard")
+
+    course = get_object_or_404(Course, pk=course_id)
+
+    if not selected_ids:
+        messages.warning(request, "Please select at least one draft enrollment.")
+        return HttpResponseRedirect(reverse("portal_course_submit_confirm") + f"?course_id={course.id}")
+
+    now = timezone.now()
+
+    qs = CourseEnrollment.objects.filter(
+        id__in=selected_ids,
+        organization=user.organization,
+        course=course,
+        status="DRAFT",
+    )
+
+    with transaction.atomic():
+        updated = qs.update(
+            status="SUBMITTED",
+            submitted_at=now,
+            submitted_by=user,
+        )
+
+    messages.success(request, f"Submitted {updated} enrollment(s) for admin approval.")
+    return redirect("portal_dashboard")
 # =========================================================
 # COMPETITION REGISTRATION (EventRegistration)
 # =========================================================
