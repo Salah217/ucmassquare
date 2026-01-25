@@ -496,6 +496,47 @@ def course_submit_final(request):
 
     messages.success(request, f"Submitted {updated} enrollment(s) for admin approval.")
     return redirect("portal_dashboard")
+
+@login_required
+def course_enrollment_list(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    qs = (
+        CourseEnrollment.objects
+        .filter(organization=user.organization)
+        .select_related("student", "course")
+        .order_by("-created_at")
+    )
+
+    status = (request.GET.get("status") or "").strip()
+    q = (request.GET.get("q") or "").strip()
+
+    if status:
+        qs = qs.filter(status=status)
+
+    if q:
+        qs = qs.filter(
+            Q(student__sa_registration_no__icontains=q) |
+            Q(student__first_name_en__icontains=q) |
+            Q(student__last_name_en__icontains=q) |
+            Q(course__name__icontains=q)
+        )
+
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return render(request, "portal/course_enrollment_list.html", {
+        "enrollments": page_obj,
+        "page_obj": page_obj,
+        "status": status,
+        "q": q,
+        "is_manager": is_manager(user),
+        "STATUS_CHOICES": CourseEnrollment.STATUS,
+    })
 # =========================================================
 # COMPETITION REGISTRATION (EventRegistration)
 # =========================================================
