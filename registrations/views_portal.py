@@ -393,32 +393,70 @@ def course_register_confirm(request):
     ).order_by("first_name_en", "last_name_en")
 
     created = 0
+    already = 0
+    reactivated = 0
+
+    # Optional: allow re-apply only if these statuses (adjust to your STATUS list)
+    RESETTABLE = {"REJECTED", "DROPPED"}
+
+    # We will build a dict student_id -> enrollment (so HTML can show real status)
+    enrollment_by_student = {}
+
     with transaction.atomic():
         for s in students:
-            _, was_created = CourseEnrollment.objects.get_or_create(
+            enrollment, was_created = CourseEnrollment.objects.get_or_create(
                 organization=user.organization,
                 student=s,
                 course=course,
                 defaults={"created_by": user, "status": "DRAFT"},
             )
+
             if was_created:
                 created += 1
+            else:
+                # Prevent “same student same course many times”
+                # If you want to allow re-apply only for REJECTED/DROPPED:
+                if enrollment.status in RESETTABLE:
+                    enrollment.status = "DRAFT"
+                    enrollment.created_by = user
+                    enrollment.submitted_at = None
+                    enrollment.submitted_by = None
+                    enrollment.approved_at = None
+                    enrollment.approved_by = None
+                    enrollment.rejection_reason = ""
+                    enrollment.invoice_no = ""
+                    enrollment.paid_at = None
+                    enrollment.payment_ref = ""
+                    enrollment.save(update_fields=[
+                        "status", "created_by",
+                        "submitted_at", "submitted_by",
+                        "approved_at", "approved_by",
+                        "rejection_reason",
+                        "invoice_no", "paid_at", "payment_ref",
+                    ])
+                    reactivated += 1
+                else:
+                    already += 1
 
-    messages.success(request, f"Added {created} student(s) to {course} as Draft.")
+            enrollment_by_student[s.id] = enrollment
+
+    # Better message (no more confusing “Added 0”)
+    msg = f"Draft created for {created} student(s)."
+    if reactivated:
+        msg += f" Reactivated {reactivated} enrollment(s)."
+    if already:
+        msg += f" {already} already enrolled (no change)."
+    messages.success(request, msg)
+
     return render(request, "portal/course_register_confirm.html", {
         "course": course,
         "students": students,
         "created_count": created,
+        "reactivated_count": reactivated,
+        "already_count": already,
+        "enrollment_by_student": enrollment_by_student,
         "is_manager": is_manager(user),
     })
-# ====== ADD/VERIFY IMPORTS AT TOP of views_portal.py ======
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.db import transaction
-from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-from django.utils import timezone
 
 # make sure these are already imported in your file:
 # from .models import Course, CourseEnrollment
