@@ -36,7 +36,7 @@ urlpatterns = [
     # Staff adds students → Draft
     path("courses/register/", v.course_register, name="portal_course_register"),
     path("courses/register/confirm/", v.course_register_confirm, name="portal_course_register_confirm"),
-
+    path("courses/enrollments/", v.course_enrollment_list, name="portal_course_enrollment_list"), 
     # Manager submits to admin
     path("courses/submit/confirm/", v.course_submit_confirm, name="portal_course_submit_confirm"),
     path("courses/submit/final/", v.course_submit_final, name="portal_course_submit_final"),

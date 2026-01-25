@@ -36,7 +36,19 @@ def is_manager(user):
 def portal_dashboard(request):
     org = getattr(request.user, "organization", None)
     today = timezone.now().date()
+# ---- COURSE ENROLLMENT COUNTS (per org) ----
+    course_draft_count = 0
+    course_submitted_count = 0
 
+    if org:
+     course_draft_count = CourseEnrollment.objects.filter(
+        organization=org, status="DRAFT"
+     ).count()
+
+     course_submitted_count = CourseEnrollment.objects.filter(
+        organization=org, status="SUBMITTED"
+     ).count()
+    
     # ---- OPEN COURSES ----
     open_courses = (
         Course.objects
@@ -67,6 +79,8 @@ def portal_dashboard(request):
         "notices": notices,
         "open_courses_count": len(open_courses),
         "open_events_count": len(open_events),
+        "course_draft_count": course_draft_count,
+        "course_submitted_count": course_submitted_count,
     }
     return render(request, "portal/dashboard.html", ctx)
 
