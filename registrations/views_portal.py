@@ -530,10 +530,7 @@ def course_submit_final(request):
             submitted_by=user,
         )
 
-    messages.success(request, f"Submitted {updated} enrollment(s) for admin approval.")
-    return redirect("portal_dashboard")
-
-@login_required
+    messages.s@login_required
 def course_enrollment_list(request):
     user = request.user
     if is_admin(user):
@@ -565,7 +562,7 @@ def course_enrollment_list(request):
     paginator = Paginator(qs, 50)
     page_obj = paginator.get_page(request.GET.get("page"))
 
-    # ✅ safest way to get status choices from the model field (no guessing names)
+    # ✅ safest: read choices from model field directly (never breaks)
     status_choices = CourseEnrollment._meta.get_field("status").choices
 
     return render(request, "portal/course_enrollment_list.html", {
@@ -575,8 +572,10 @@ def course_enrollment_list(request):
         "q": q,
         "is_manager": is_manager(user),
         "STATUS_CHOICES": status_choices,
-    })
-    
+    })uccess(request, f"Submitted {updated} enrollment(s) for admin approval.")
+    return redirect("portal_dashboard")
+
+
 # =========================================================
 # COMPETITION REGISTRATION (EventRegistration)
 # =========================================================
