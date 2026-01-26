@@ -565,14 +565,18 @@ def course_enrollment_list(request):
     paginator = Paginator(qs, 50)
     page_obj = paginator.get_page(request.GET.get("page"))
 
+    # ✅ safest way to get status choices from the model field (no guessing names)
+    status_choices = CourseEnrollment._meta.get_field("status").choices
+
     return render(request, "portal/course_enrollment_list.html", {
         "enrollments": page_obj,
         "page_obj": page_obj,
         "status": status,
         "q": q,
         "is_manager": is_manager(user),
-        "STATUS_CHOICES": CourseEnrollment.STATUS,
+        "STATUS_CHOICES": status_choices,
     })
+    
 # =========================================================
 # COMPETITION REGISTRATION (EventRegistration)
 # =========================================================
