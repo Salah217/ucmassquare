@@ -530,7 +530,7 @@ def course_submit_final(request):
             submitted_by=user,
         )
 
-    messages.s@login_required
+messages.s@login_required
 def course_enrollment_list(request):
     user = request.user
     if is_admin(user):
@@ -572,10 +572,38 @@ def course_enrollment_list(request):
         "q": q,
         "is_manager": is_manager(user),
         "STATUS_CHOICES": status_choices,
+    })
+
+from django.contrib import messages
+from django.db import transaction
+from django.views.decorators.http import require_POST
+
+@login_required
+@require_POST
+def course_enrollment_submit_selected(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    ids = request.POST.getlist("enrollment_ids")
+    if not ids:
+        messages.warning(request, "Please select at least one enrollment to submit.")
+        return redirect("portal_course_enrollment_list")
+
+    updated = 0
+
+    with transaction.atomic():
+        qs = CourseEnrollment.objects.filter(
+            organization=user.organization,
+            id__in=ids,
+            status="DRAFT",
+        )
+        updated = qs.update(status="SUBMITTED")
+
     messages.success(request, f"Submitted {updated} enrollment(s) for admin approval.")
-    return redirect("portal_dashboard")
-
-
+    return redirect("portal_course_enrollment_list")
 # =========================================================
 # COMPETITION REGISTRATION (EventRegistration)
 # =========================================================

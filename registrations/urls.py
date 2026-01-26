@@ -41,6 +41,7 @@ urlpatterns = [
     path("courses/submit/confirm/", v.course_submit_confirm, name="portal_course_submit_confirm"),
     path("courses/submit/final/", v.course_submit_final, name="portal_course_submit_final"),
 
+    path("courses/enrollments/submit/", v.course_enrollment_submit_selected, name="portal_course_enrollment_submit_selected"),
     # =============================
     # COMPETITION REGISTRATION FLOW
     # =============================
