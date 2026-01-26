@@ -572,7 +572,7 @@ def course_enrollment_list(request):
         "q": q,
         "is_manager": is_manager(user),
         "STATUS_CHOICES": status_choices,
-    })uccess(request, f"Submitted {updated} enrollment(s) for admin approval.")
+    messages.success(request, f"Submitted {updated} enrollment(s) for admin approval.")
     return redirect("portal_dashboard")
 
 
