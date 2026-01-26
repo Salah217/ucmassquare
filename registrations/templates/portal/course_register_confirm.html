@@ -1,5 +1,4 @@
 {% extends "portal/layout.html" %}
-{% load portal_extras %}
 
 {% block title %}Course Draft Created | UCMAS{% endblock %}
 
@@ -9,17 +8,10 @@
     <div class="col">
       <h2 class="page-title">Course Enrollment Draft Created</h2>
       <div class="text-muted mt-1">
-        Draft prepared for
-        <strong>{{ course }}</strong>.
-        {% if created_count %}
-          Added <strong>{{ created_count }}</strong> new student(s).
-        {% endif %}
-        {% if reactivated_count %}
-          Reactivated <strong>{{ reactivated_count }}</strong> enrollment(s).
-        {% endif %}
-        {% if already_count %}
-          <strong>{{ already_count }}</strong> already enrolled (no change).
-        {% endif %}
+        Draft prepared for <strong>{{ course }}</strong>.
+        {% if created_count %} Added <strong>{{ created_count }}</strong> new student(s).{% endif %}
+        {% if reactivated_count %} Reactivated <strong>{{ reactivated_count }}</strong> enrollment(s).{% endif %}
+        {% if already_count %} <strong>{{ already_count }}</strong> already enrolled (no change).{% endif %}
       </div>
     </div>
 
@@ -28,11 +20,10 @@
         Back
       </a>
 
-      {# Manager submit step (enabled later) #}
+      {# Manager submit step (enable later) #}
       {#
       {% if is_manager %}
-        <a href="{% url 'portal_course_submit_confirm' %}?course_id={{ course.id }}"
-           class="btn btn-danger">
+        <a href="{% url 'portal_course_submit_confirm' %}?course_id={{ course.id }}" class="btn btn-danger">
           Manager Submit
         </a>
       {% endif %}
@@ -67,9 +58,7 @@
     <div class="card">
       <div class="card-body">
         <div class="subheader">Course level</div>
-        <div class="h1 mb-0">
-          {% if course.level %}{{ course.level }}{% else %}—{% endif %}
-        </div>
+        <div class="h1 mb-0">{% if course.level %}{{ course.level }}{% else %}—{% endif %}</div>
         <div class="text-muted mt-2">Target level</div>
       </div>
     </div>
@@ -79,9 +68,7 @@
     <div class="card">
       <div class="card-body">
         <div class="subheader">Fee (per student)</div>
-        <div class="h1 mb-0">
-          {% if course.fee %}{{ course.fee }} SAR{% else %}—{% endif %}
-        </div>
+        <div class="h1 mb-0">{% if course.fee %}{{ course.fee }} SAR{% else %}—{% endif %}</div>
         <div class="text-muted mt-2">From course settings</div>
       </div>
     </div>
@@ -107,23 +94,13 @@
       </thead>
       <tbody>
         {% for s in students %}
-        {% with e=enrollment_by_student|get_item:s.id %}
         <tr>
           <td class="text-muted">{{ s.sa_registration_no }}</td>
           <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
-          <td>
-            <span class="badge bg-blue-lt">Level {{ s.current_level }}</span>
-          </td>
-          <td>
-            {% if e %}
-              <span class="badge bg-azure-lt">{{ e.status }}</span>
-            {% else %}
-              —
-            {% endif %}
-          </td>
+          <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
+          <td><span class="badge bg-azure-lt">{{ s.enrollment_status|default:"—" }}</span></td>
           <td class="text-muted">{{ s.guardian_name }} · {{ s.guardian_phone }}</td>
         </tr>
-        {% endwith %}
         {% endfor %}
       </tbody>
     </table>
@@ -131,10 +108,8 @@
 
   <div class="card-body">
     <div class="text-muted">
-      Status is <strong>DRAFT</strong>.
-      You may add more students by going back.
-      The <strong>manager</strong> will submit this draft later,
-      then <strong>admin</strong> will approve and issue an invoice.
+      Status is <strong>DRAFT</strong>. You may add more students by going back.
+      The <strong>manager</strong> will submit this draft later, then <strong>admin</strong> will approve and issue an invoice.
     </div>
   </div>
 </div>
