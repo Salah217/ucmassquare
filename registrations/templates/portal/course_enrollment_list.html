@@ -1,0 +1,118 @@
+{% extends "portal/layout.html" %}
+
+{% block title %}Course Enrollments | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Course Enrollments</h2>
+      <div class="text-muted mt-1">Track enrollments and filter by status.</div>
+    </div>
+    <div class="col-auto ms-auto d-flex gap-2">
+      <a href="{% url 'portal_course_register' %}" class="btn btn-primary">
+        Register in a Course
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-sm-4">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="">All</option>
+          {% for val,label in STATUS_CHOICES %}
+            <option value="{{ val }}" {% if status == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-sm-6">
+        <label class="form-label">Search</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control"
+               placeholder="Reg No, student name, course name">
+      </div>
+
+      <div class="col-sm-2 d-flex gap-2">
+        <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+        <a href="{% url 'portal_course_enrollment_list' %}" class="btn btn-outline-secondary w-100">Reset</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title mb-0">Enrollments</h3>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Created</th>
+          <th>Course</th>
+          <th>Student</th>
+          <th>Reg No</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in enrollments %}
+          <tr>
+            <td class="text-muted">{{ e.created_at|date:"Y-m-d" }}</td>
+            <td class="fw-semibold">{{ e.course }}</td>
+            <td>{{ e.student.first_name_en }} {{ e.student.last_name_en }}</td>
+            <td class="text-muted">{{ e.student.sa_registration_no }}</td>
+            <td>
+              <span class="badge
+                {% if e.status == 'DRAFT' %}bg-blue-lt
+                {% elif e.status == 'SUBMITTED' %}bg-yellow-lt
+                {% elif e.status == 'APPROVED' %}bg-green-lt
+                {% elif e.status == 'REJECTED' %}bg-red-lt
+                {% else %}bg-azure-lt{% endif %}">
+                {{ e.status }}
+              </span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">No enrollments found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="card-footer d-flex align-items-center">
+    <p class="m-0 text-muted">
+      Page <span>{{ page_obj.number }}</span> of <span>{{ page_obj.paginator.num_pages }}</span>
+    </p>
+
+    <ul class="pagination m-0 ms-auto">
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status }}&q={{ q }}">prev</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">prev</span></li>
+      {% endif %}
+
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status }}&q={{ q }}">next</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">next</span></li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
