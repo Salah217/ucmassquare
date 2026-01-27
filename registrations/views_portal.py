@@ -341,21 +341,45 @@ def student_wizard_cancel(request, pk=None):
 # =========================================================
 # COURSE REGISTRATION (CourseEnrollment)
 # =========================================================
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from .models import Course, Student, CourseEnrollment
+
 @login_required
 def course_register(request):
     user = request.user
-    if is_admin(user):
-        return redirect("/admin/")
-    if not user.organization_id:
+    org = user.organization
+    if not org:
         return render(request, "portal/no_organization.html")
 
-    form = CourseRegisterForm(user=user)
-    students = Student.objects.filter(organization=user.organization).order_by("-created_at")
+    courses = Course.objects.filter(is_active=True).order_by("level")
+
+    course_id = request.GET.get("course_id") or request.POST.get("course_id")
+    selected_course = None
+    students = Student.objects.none()
+
+    if course_id:
+        selected_course = get_object_or_404(Course, id=course_id, is_active=True)
+
+        prereq_level = selected_course.level - 1  # Level 1 -> prereq 0
+
+        # Base eligible by level + organization
+        students = Student.objects.filter(
+            organization=org,
+            current_level=prereq_level
+        )
+
+        # Exclude already enrolled in THIS course (any status)
+        enrolled_ids = CourseEnrollment.objects.filter(
+            course=selected_course
+        ).values_list("student_id", flat=True)
+
+        students = students.exclude(id__in=enrolled_ids)
 
     return render(request, "portal/course_register.html", {
-        "form": form,
-        "students": students[:200],
-        "org_name": user.organization.name_en,
+        "courses": courses,
+        "selected_course": selected_course,
+        "students": students,
     })
 
 @login_required
