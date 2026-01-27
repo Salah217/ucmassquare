@@ -344,7 +344,6 @@ def student_wizard_cancel(request, pk=None):
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import Course, Student, CourseEnrollment
-
 @login_required
 def course_register(request):
     user = request.user
@@ -363,15 +362,23 @@ def course_register(request):
 
         prereq_level = selected_course.level - 1  # Level 1 -> prereq 0
 
-        # Base eligible by level + organization
+        # ✅ Base eligible by level + organization
         students = Student.objects.filter(
             organization=org,
             current_level=prereq_level
-        )
+        ).order_by("first_name_en", "last_name_en")
 
-        # Exclude already enrolled in THIS course (any status)
+        # ✅ Exclude students who already have an enrollment for this course
+        #    Block DRAFT too, so draft students won't appear again
+        BLOCK = {
+            "DRAFT", "SUBMITTED", "ACCEPTED", "PENDING_PAYMENT",
+            "PAID", "ENROLLED", "COMPLETED"
+        }
+
         enrolled_ids = CourseEnrollment.objects.filter(
-            course=selected_course
+            organization=org,          # ✅ IMPORTANT
+            course=selected_course,
+            status__in=BLOCK
         ).values_list("student_id", flat=True)
 
         students = students.exclude(id__in=enrolled_ids)
@@ -381,12 +388,7 @@ def course_register(request):
         "selected_course": selected_course,
         "students": students,
     })
-
-from django.utils import timezone
-from django.http import HttpResponseForbidden
-from django.urls import reverse
-from django.contrib import messages
-
+    
 @login_required
 def portal_course_submit_confirm(request):
     user = request.user
