@@ -479,7 +479,7 @@ def course_submit_confirm(request):
     fee_per_student = course.fee or 0
     total_amount = fee_per_student * count
 
-    return render(request, "portal/course_submit_confirm.html", {
+    return render(request, "portal/course_register_confirm.html", {
         "course": course,
         "regs": regs,
         "count": count,
