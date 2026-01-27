@@ -6,75 +6,105 @@
   <div class="row align-items-center">
     <div class="col">
       <h2 class="page-title">Register in a Course</h2>
-      <div class="text-muted mt-1">Choose a course then select students from your database.</div>
+      <div class="text-muted mt-1">Choose a course then select eligible students from your database.</div>
     </div>
   </div>
 </div>
 
-<form method="post" action="{% url 'portal_course_register_confirm' %}">
-  {% csrf_token %}
-
+{# ✅ Course selector (GET) — reloads page to filter students #}
+<form method="get">
   <div class="card mb-3">
     <div class="card-body">
       <div class="row g-3 align-items-end">
         <div class="col-md-6">
           <label class="form-label">Course</label>
-          {{ form.course }}
+          <select name="course_id" class="form-select" onchange="this.form.submit()">
+            <option value="">---------</option>
+            {% for c in courses %}
+              <option value="{{ c.id }}"
+                {% if selected_course and selected_course.id == c.id %}selected{% endif %}>
+                Level {{ c.level }} – {{ c.name }}
+              </option>
+            {% endfor %}
+          </select>
+          {% if selected_course %}
+            <div class="text-muted mt-2 small">
+              Eligible students: Level {{ selected_course.level|add:"-1" }} (and not already enrolled in this course).
+            </div>
+          {% endif %}
         </div>
+
         <div class="col-md-6 text-muted">
           Tip: You can enroll many students at once.
         </div>
       </div>
     </div>
   </div>
+</form>
 
-  <div class="card">
-    <div class="card-header">
-      <h3 class="card-title mb-0">Select Students</h3>
-      <div class="card-actions">
-        <label class="form-check">
-          <input class="form-check-input" type="checkbox" id="check-all">
-          <span class="form-check-label">Select all</span>
-        </label>
+{# ✅ POST form for applying selected students #}
+<form method="post" action="{% url 'portal_course_register_confirm' %}">
+  {% csrf_token %}
+
+  {% if selected_course %}
+    <input type="hidden" name="course_id" value="{{ selected_course.id }}">
+  {% endif %}
+
+  {% if selected_course %}
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title mb-0">Select Students</h3>
+        <div class="card-actions">
+          <label class="form-check">
+            <input class="form-check-input" type="checkbox" id="check-all">
+            <span class="form-check-label">Select all</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th class="w-1"></th>
+              <th>Registration No</th>
+              <th>Student</th>
+              <th>Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+            <tr>
+              <td>
+                <input class="form-check-input row-check" type="checkbox" name="selected_ids" value="{{ s.id }}">
+              </td>
+              <td class="text-muted">{{ s.sa_registration_no }}</td>
+              <td>
+                <div class="fw-bold">{{ s.first_name_en }} {{ s.last_name_en }}</div>
+                <div class="text-muted small">Guardian: {{ s.guardian_name }} · {{ s.guardian_phone }}</div>
+              </td>
+              <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">
+                No eligible students found (wrong level or already enrolled).
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card-footer d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary">Apply for selected students</button>
       </div>
     </div>
-
-    <div class="table-responsive">
-      <table class="table table-vcenter card-table">
-        <thead>
-          <tr>
-            <th class="w-1"></th>
-            <th>Registration No</th>
-            <th>Student</th>
-            <th>Level</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for s in students %}
-          <tr>
-            <td>
-              <input class="form-check-input row-check" type="checkbox" name="selected_ids" value="{{ s.id }}">
-            </td>
-            <td class="text-muted">{{ s.sa_registration_no }}</td>
-            <td>
-              <div class="fw-bold">{{ s.first_name_en }} {{ s.last_name_en }}</div>
-              <div class="text-muted small">Guardian: {{ s.guardian_name }} · {{ s.guardian_phone }}</div>
-            </td>
-            <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="4" class="text-center text-muted py-4">No students found.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  {% else %}
+    <div class="alert alert-info">
+      Please select a course to see eligible students.
     </div>
-
-    <div class="card-footer d-flex justify-content-end">
-      <button type="submit" class="btn btn-primary">Apply for selected students</button>
-    </div>
-  </div>
+  {% endif %}
 </form>
 
 <script>
