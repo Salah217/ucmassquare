@@ -7,6 +7,8 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.urls import reverse
 from django.http import HttpResponseRedirect
+from django.views.decorators.http import require_POST
+
 
 
 from .models import Student, Event, Course, CourseEnrollment, EventRegistration
@@ -386,40 +388,80 @@ def course_register(request):
         "selected_course": selected_course,
         "students": students,
     })
-
 @login_required
-def course_submit_confirm(request):
+def course_register_confirm(request):
     user = request.user
     if is_admin(user):
         return redirect("/admin/")
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
 
-    if not is_manager(user):
-        return HttpResponseForbidden("Manager access required")
+    if request.method != "POST":
+        return redirect("portal_course_register")
 
-    course_id = request.GET.get("course_id")
+    course_id = request.POST.get("course_id")
+    selected_ids = request.POST.getlist("selected_ids")
+
+    if not course_id:
+        messages.warning(request, "Please choose a course.")
+        return redirect("portal_course_register")
+
     course = get_object_or_404(Course, id=course_id, is_active=True)
 
-    drafts = CourseEnrollment.objects.filter(
+    if not selected_ids:
+        messages.warning(request, "Please select at least one student.")
+        return redirect(f"{reverse('portal_course_register')}?course_id={course.id}")
+
+    students_qs = Student.objects.filter(
         organization=user.organization,
-        course=course,
-        status="DRAFT",
-    ).select_related("student").order_by("student__sa_registration_no")
+        id__in=selected_ids
+    ).order_by("first_name_en", "last_name_en")
 
-    selected_count = drafts.count()
-    fee_per_student = course.fee
-    total_amount = fee_per_student * selected_count
+    students = list(students_qs)
 
-    return render(request, "portal/course_submit_confirm.html", {
+    created = 0
+    already = 0
+    reactivated = 0
+    RESETTABLE = {"REJECTED", "DROPPED"}
+
+    with transaction.atomic():
+        for s in students:
+            enrollment, was_created = CourseEnrollment.objects.get_or_create(
+                organization=user.organization,
+                student=s,
+                course=course,
+                defaults={"created_by": user, "status": "DRAFT"},
+            )
+
+            if was_created:
+                created += 1
+            else:
+                if enrollment.status in RESETTABLE:
+                    enrollment.status = "DRAFT"
+                    enrollment.created_by = user
+                    enrollment.submitted_at = None
+                    enrollment.submitted_by = None
+                    enrollment.approved_at = None
+                    enrollment.approved_by = None
+                    enrollment.rejection_reason = ""
+                    enrollment.invoice_no = ""
+                    enrollment.paid_at = None
+                    enrollment.payment_ref = ""
+                    enrollment.save()
+                    reactivated += 1
+                else:
+                    already += 1
+
+            s.enrollment_status = enrollment.status
+
+    return render(request, "portal/course_register_confirm.html", {
         "course": course,
-        "drafts": drafts,
-        "selected_count": selected_count,
-        "fee_per_student": fee_per_student,
-        "total_amount": total_amount,
-        "is_manager": True,
+        "students": students,
+        "created_count": created,
+        "reactivated_count": reactivated,
+        "already_count": already,
+        "is_manager": is_manager(user),
     })
-
 
 @login_required
 def course_submit(request):
@@ -468,50 +510,44 @@ def course_submit_confirm(request):
     user = request.user
     if is_admin(user):
         return redirect("/admin/")
-    if not is_manager(user):
-        return render(request, "portal/forbidden.html", status=403)
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
 
-    course_id = request.GET.get("course_id") or request.POST.get("course_id")
-    if not course_id:
-        messages.warning(request, "Missing course_id.")
-        return redirect("portal_dashboard")
+    if not is_manager(user):
+        return HttpResponseForbidden("Manager access required")
 
-    course = get_object_or_404(Course, pk=course_id)
+    course_id = request.GET.get("course_id")
+    course = get_object_or_404(Course, id=course_id, is_active=True)
 
-    regs = (
-        CourseEnrollment.objects
-        .filter(organization=user.organization, course=course, status="DRAFT")
-        .select_related("student")
-        .order_by("-created_at")
-    )
+    drafts = CourseEnrollment.objects.filter(
+        organization=user.organization,
+        course=course,
+        status="DRAFT",
+    ).select_related("student").order_by("student__sa_registration_no")
 
-    count = regs.count()
+    selected_count = drafts.count()
     fee_per_student = course.fee or 0
-    total_amount = fee_per_student * count
+    total_amount = fee_per_student * selected_count
 
-    return render(request, "portal/course_register_confirm.html", {
+    return render(request, "portal/course_submit_confirm.html", {
         "course": course,
-        "regs": regs,
-        "count": count,
+        "drafts": drafts,
+        "selected_count": selected_count,
         "fee_per_student": fee_per_student,
         "total_amount": total_amount,
+        "is_manager": True,
     })
 
-
 @login_required
+@require_POST
 def course_submit_final(request):
     user = request.user
     if is_admin(user):
         return redirect("/admin/")
-    if not is_manager(user):
-        return render(request, "portal/forbidden.html", status=403)
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
-
-    if request.method != "POST":
-        return redirect("portal_dashboard")
+    if not is_manager(user):
+        return HttpResponseForbidden("Manager access required")
 
     course_id = request.POST.get("course_id")
     selected_ids = request.POST.getlist("selected_ids")
@@ -541,6 +577,9 @@ def course_submit_final(request):
             submitted_at=now,
             submitted_by=user,
         )
+
+    messages.success(request, f"Submitted {updated} enrollment(s) to admin.")
+    return redirect("portal_course_enrollment_list")
 
 @login_required
 def course_enrollment_list(request):
@@ -586,11 +625,7 @@ def course_enrollment_list(request):
         "STATUS_CHOICES": status_choices,
     })
 
-from django.contrib import messages
-from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
-from django.db import transaction
+
 
 @login_required
 @require_POST
