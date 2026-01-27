@@ -388,7 +388,7 @@ def course_register(request):
     })
 
 @login_required
-def portal_course_submit_confirm(request):
+def course_submit_confirm(request):
     user = request.user
     if is_admin(user):
         return redirect("/admin/")
