@@ -341,9 +341,7 @@ def student_wizard_cancel(request, pk=None):
 # =========================================================
 # COURSE REGISTRATION (CourseEnrollment)
 # =========================================================
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from .models import Course, Student, CourseEnrollment
+
 @login_required
 def course_register(request):
     user = request.user
@@ -388,7 +386,7 @@ def course_register(request):
         "selected_course": selected_course,
         "students": students,
     })
-    
+
 @login_required
 def portal_course_submit_confirm(request):
     user = request.user
