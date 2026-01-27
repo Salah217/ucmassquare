@@ -107,8 +107,8 @@ class Student(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
-    super().clean()
-    if self.current_level < 0 or self.current_level > 10:
+      super().clean()
+      if self.current_level < 0 or self.current_level > 10:
         raise ValidationError({"current_level": _("Level must be between 0 and 10.")})
 
     def save(self, *args, **kwargs):
