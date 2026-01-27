@@ -382,8 +382,47 @@ def course_register(request):
         "students": students,
     })
 
+from django.utils import timezone
+from django.http import HttpResponseForbidden
+from django.urls import reverse
+from django.contrib import messages
+
 @login_required
-def course_register_confirm(request):
+def portal_course_submit_confirm(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    if not is_manager(user):
+        return HttpResponseForbidden("Manager access required")
+
+    course_id = request.GET.get("course_id")
+    course = get_object_or_404(Course, id=course_id, is_active=True)
+
+    drafts = CourseEnrollment.objects.filter(
+        organization=user.organization,
+        course=course,
+        status="DRAFT",
+    ).select_related("student").order_by("student__sa_registration_no")
+
+    selected_count = drafts.count()
+    fee_per_student = course.fee
+    total_amount = fee_per_student * selected_count
+
+    return render(request, "portal/course_submit_confirm.html", {
+        "course": course,
+        "drafts": drafts,
+        "selected_count": selected_count,
+        "fee_per_student": fee_per_student,
+        "total_amount": total_amount,
+        "is_manager": True,
+    })
+
+
+@login_required
+def portal_course_submit(request):
     user = request.user
     if is_admin(user):
         return redirect("/admin/")
@@ -393,83 +432,32 @@ def course_register_confirm(request):
     if request.method != "POST":
         return redirect("portal_course_register")
 
-    form = CourseRegisterForm(request.POST, user=user)
-    selected_ids = request.POST.getlist("selected_ids")
+    if not is_manager(user):
+        return HttpResponseForbidden("Manager access required")
 
-    if not form.is_valid():
-        students = Student.objects.filter(organization=user.organization).order_by("-created_at")[:200]
-        return render(request, "portal/course_register.html", {
-            "form": form,
-            "students": students,
-            "org_name": user.organization.name_en,
-        })
+    course_id = request.POST.get("course_id")
+    course = get_object_or_404(Course, id=course_id, is_active=True)
 
-    if not selected_ids:
-        messages.warning(request, "Please select at least one student.")
-        return redirect("portal_course_register")
-
-    course = form.cleaned_data["course"]
-
-    students_qs = Student.objects.filter(
+    qs = CourseEnrollment.objects.filter(
         organization=user.organization,
-        id__in=selected_ids
-    ).order_by("first_name_en", "last_name_en")
+        course=course,
+        status="DRAFT",
+    )
 
-    students = list(students_qs)
+    count = qs.count()
+    if count == 0:
+        messages.warning(request, "No draft enrollments to submit.")
+        return redirect(f"{reverse('portal_course_register')}?course_id={course.id}")
 
-    created = 0
-    already = 0
-    reactivated = 0
+    now = timezone.now()
+    qs.update(
+        status="SUBMITTED",
+        submitted_at=now,
+        submitted_by=user,
+    )
 
-    RESETTABLE = {"REJECTED", "DROPPED"}  # allow re-apply only for these
-
-    with transaction.atomic():
-        for s in students:
-            enrollment, was_created = CourseEnrollment.objects.get_or_create(
-                organization=user.organization,
-                student=s,
-                course=course,
-                defaults={"created_by": user, "status": "DRAFT"},
-            )
-
-            if was_created:
-                created += 1
-            else:
-                if enrollment.status in RESETTABLE:
-                    enrollment.status = "DRAFT"
-                    enrollment.created_by = user
-                    enrollment.submitted_at = None
-                    enrollment.submitted_by = None
-                    enrollment.approved_at = None
-                    enrollment.approved_by = None
-                    enrollment.rejection_reason = ""
-                    enrollment.invoice_no = ""
-                    enrollment.paid_at = None
-                    enrollment.payment_ref = ""
-                    enrollment.save()
-                    reactivated += 1
-                else:
-                    already += 1
-
-            # ✅ attach enrollment status directly (no template filters needed)
-            s.enrollment_status = enrollment.status
-
-    msg = f"Draft created for {created} student(s)."
-    if reactivated:
-        msg += f" Reactivated {reactivated} enrollment(s)."
-    if already:
-        msg += f" {already} already enrolled (no change)."
-    messages.success(request, msg)
-
-    return render(request, "portal/course_register_confirm.html", {
-        "course": course,
-        "students": students,
-        "created_count": created,
-        "reactivated_count": reactivated,
-        "already_count": already,
-        "is_manager": is_manager(user),
-    })
-
+    messages.success(request, f"Submitted {count} enrollment(s).")
+    return redirect(f"{reverse('portal_course_register')}?course_id={course.id}")
 
 # =========================================================
 # COURSE MANAGER SUBMIT (CourseEnrollment workflow)
