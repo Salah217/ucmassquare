@@ -23,15 +23,20 @@
   <div class="col-12">
     <div class="row g-3">
 
-      <div class="col-md-4">
-        <a href="{% url 'portal_student_add' %}" class="card card-link text-decoration-none">
-          <div class="card-body">
-            <div class="subheader">MODULE</div>
-            <div class="h3 mb-1">Register New Student</div>
-            <div class="text-muted">Add a student to your school database.</div>
-          </div>
-        </a>
-      </div>
+      <!-- MODULE 1: Register New Student (Green) -->
+<div class="col-12 col-md-4">
+  <a href="{% url 'portal_student_add' %}" class="text-decoration-none">
+   <div class="card h-100 shadow-sm border-0 card-module card-module-green">
+    <div class="card-body">
+     <div class="d-flex align-items-center gap-2 mb-2">
+      <span class="badge bg-green-lt">MODULE</span>
+    </div>
+      <h3 class="card-title mb-1">Register New Student</h3>
+       <div class="text-muted">Add a student to your school database.</div>
+       </div>
+    </div>
+ </a>
+</div>
 
       <div class="col-md-4">
         <a href="{% url 'portal_course_register' %}" class="card card-link text-decoration-none">
