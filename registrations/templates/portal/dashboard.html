@@ -38,30 +38,43 @@
  </a>
 </div>
 
-      <div class="col-md-4">
-        <a href="{% url 'portal_course_register' %}" class="card card-link text-decoration-none">
-          <div class="card-body">
-            <div class="subheader">MODULE</div>
-            <div class="h3 mb-1">Register in a Course</div>
-            <div class="text-muted">Select students and enroll them in a course.</div>
-          </div>
-        </a>
+      <!-- MODULE 2: Register in a Course (Blue) -->
+<div class="col-12 col-md-4">
+  <a href="{% url 'portal_course_register' %}" class="text-decoration-none">
+   <div class="card h-100 shadow-sm border-0 card-module card-module-blue">
+     <div class="card-body">
+       <div class="d-flex align-items-center gap-2 mb-2">
+         <span class="badge bg-blue-lt">MODULE</span>
+       </div>
+          <h3 class="card-title mb-1">Register in a Course</h3>
+           <div class="text-muted">Select students and enroll them in a course.</div>
       </div>
+   </div>
+ </a>
+</div>
 
-      <div class="col-md-4">
-        <a href="{% url 'portal_competition_register' %}" class="card card-link text-decoration-none">
-          <div class="card-body">
-            <div class="subheader">MODULE</div>
-            <div class="h3 mb-1">Register in a Competition</div>
-            <div class="text-muted">Select students and add them to a competition.</div>
-
-            {# ✅ Removed Submit & Payment from dashboard (will be a separate page after submission) #}
-          </div>
-        </a>
+ <!-- MODULE 3: Register in a Competition (Yellow) -->
+<div class="col-12 col-md-4">
+  <a href="{% url 'portal_competition_register' %}" class="text-decoration-none">
+   <div class="card h-100 shadow-sm border-0 card-module card-module-yellow">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge bg-yellow-lt">MODULE</span>
+        </div>
+            <h3 class="card-title mb-1">Register in a Competition</h3>
+              <div class="text-muted">Select students and add them to a competition.</div>
       </div>
-
     </div>
-  </div>
+ </a>
+</div>
+
+
+<style>
+.card-module { border-radius: 14px; min-height: 140px; }
+.card-module-green { border-top: 6px solid #2fb344; }
+.card-module-blue { border-top: 6px solid #206bc4; }
+.card-module-yellow{ border-top: 6px solid #f59f00; }
+</style>
 
   {# ✅ KPIs #}
   <div class="col-sm-6 col-lg-3">
