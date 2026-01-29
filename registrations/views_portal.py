@@ -505,6 +505,8 @@ def course_submit(request):
 # COURSE MANAGER SUBMIT (CourseEnrollment workflow)
 # =========================================================
 
+from django.views.decorators.http import require_POST
+
 @login_required
 def course_submit_confirm(request):
     user = request.user
@@ -512,11 +514,14 @@ def course_submit_confirm(request):
         return redirect("/admin/")
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
-
     if not is_manager(user):
         return HttpResponseForbidden("Manager access required")
 
     course_id = request.GET.get("course_id")
+    if not course_id:
+        messages.warning(request, "Missing course_id.")
+        return redirect("portal_course_enrollment_list")
+
     course = get_object_or_404(Course, id=course_id, is_active=True)
 
     drafts = CourseEnrollment.objects.filter(
@@ -537,7 +542,7 @@ def course_submit_confirm(request):
         "total_amount": total_amount,
         "is_manager": True,
     })
-
+    
 @login_required
 @require_POST
 def course_submit_final(request):
@@ -554,9 +559,9 @@ def course_submit_final(request):
 
     if not course_id:
         messages.warning(request, "Missing course_id.")
-        return redirect("portal_dashboard")
+        return redirect("portal_course_enrollment_list")
 
-    course = get_object_or_404(Course, pk=course_id)
+    course = get_object_or_404(Course, id=course_id, is_active=True)
 
     if not selected_ids:
         messages.warning(request, "Please select at least one draft enrollment.")

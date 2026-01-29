@@ -1,0 +1,106 @@
+{% extends "portal/layout.html" %}
+{% block title %}Manager Submit | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Manager Submit</h2>
+      <div class="text-muted mt-1">
+        Course: <strong>{{ course }}</strong>
+      </div>
+    </div>
+    <div class="col-auto ms-auto">
+      <a href="{% url 'portal_course_enrollment_list' %}" class="btn btn-outline-primary">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="row row-deck row-cards mb-3">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Draft enrollments</div>
+        <div class="h1 mb-0">{{ selected_count }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Fee per student</div>
+        <div class="h1 mb-0">{{ fee_per_student }} SAR</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="subheader">Total</div>
+        <div class="h1 mb-0">{{ total_amount }} SAR</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="{% url 'portal_course_submit_final' %}">
+  {% csrf_token %}
+  <input type="hidden" name="course_id" value="{{ course.id }}">
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title mb-0">Draft students</h3>
+      <div class="card-actions">
+        <label class="form-check">
+          <input class="form-check-input" type="checkbox" id="check-all">
+          <span class="form-check-label">Select all</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table">
+        <thead>
+          <tr>
+            <th class="w-1"></th>
+            <th>Registration No</th>
+            <th>Student</th>
+            <th>Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in drafts %}
+          <tr>
+            <td>
+              <input class="form-check-input row-check" type="checkbox" name="selected_ids" value="{{ e.id }}" checked>
+            </td>
+            <td class="text-muted">{{ e.student.sa_registration_no }}</td>
+            <td class="fw-semibold">{{ e.student.first_name_en }} {{ e.student.last_name_en }}</td>
+            <td><span class="badge bg-blue-lt">Level {{ e.student.current_level }}</span></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-4">No draft enrollments found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer d-flex justify-content-end">
+      <button type="submit" class="btn btn-danger">Submit selected to Admin</button>
+    </div>
+  </div>
+</form>
+
+<script>
+  const checkAll = document.getElementById("check-all");
+  if (checkAll) {
+    checkAll.addEventListener("change", function () {
+      document.querySelectorAll(".row-check").forEach(cb => cb.checked = checkAll.checked);
+    });
+  }
+</script>
+{% endblock %}
