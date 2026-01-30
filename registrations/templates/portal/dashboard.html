@@ -29,24 +29,31 @@
     font-weight: 700;
     font-size: .75rem;
     letter-spacing: .03em;
-    background: rgba(255,255,255,.6);
+    background: rgba(255,255,255,.65);
   }
-
-  /* Logo colors (soft background) */
   .module-green  { background: rgba(47,179,68,.18); }
   .module-yellow { background: rgba(245,159,0,.18); }
   .module-blue   { background: rgba(32,107,196,.16); }
 
-  /* Hover */
   .module-card:hover{
     transform: translateY(-1px);
     transition: .12s ease;
   }
+
+  /* KPI = NO background color, equal height */
+  .kpi-card{
+    border-radius: 14px;
+    min-height: 150px;
+    border: 1px solid rgba(0,0,0,.06);
+    background: #fff;               /* ✅ no background color */
+  }
+  .kpi-card .card-body{ padding: 18px; }
+  .kpi-badges{ display:flex; gap:.5rem; flex-wrap:wrap; }
 </style>
 
 <div class="row row-deck row-cards">
 
- 
+  {# (1) MODULES (TOP ROW) #}
   <div class="col-12">
     <div class="row g-3">
 
@@ -64,7 +71,7 @@
         <a href="{% url 'portal_course_register' %}" class="card module-card module-yellow text-decoration-none">
           <div class="card-body">
             <span class="module-pill">MODULE</span>
-            <h3 class="mt-3 mb-1">Register in a Course</h3>
+            <h3 class="mt-3 mb-1">Apply for a Course</h3>
             <div class="text-muted">Select a course then enroll eligible students.</div>
           </div>
         </a>
@@ -83,34 +90,12 @@
     </div>
   </div>
 
-
-<style>
-  .kpi-card{
-    border-radius: 14px;
-    min-height: 150px;
-    border: 1px solid rgba(0,0,0,.08);
-    background: #ffffff;
-    box-shadow: 0 2px 6px rgba(0,0,0,.04);
-    transition: .12s ease;
-  }
-
-  .kpi-card:hover{
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(0,0,0,.08);
-  }
-
-  .kpi-badges{
-    display:flex;
-    gap:.5rem;
-    flex-wrap:wrap;
-  }
-</style>
-
+  {# (2) KPIs (SECOND ROW) #}
   <div class="col-12 mt-3">
     <div class="row g-3">
 
       <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_student_list' %}" class="card text-decoration-none h-100 kpi-card ">
+        <a href="{% url 'portal_student_list' %}" class="card text-decoration-none h-100 kpi-card">
           <div class="card-body">
             <div class="subheader">Total Students</div>
             <div class="h1 mb-0">{{ total_students|default:"—" }}</div>
@@ -120,10 +105,10 @@
       </div>
 
       <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card ">
+        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
           <div class="card-body">
             <div class="subheader">Open Competitions</div>
-            <div class="h1 mb-0">{{ open_events|length|default:"0" }}</div>
+            <div class="h1 mb-0">{{ open_events|length }}</div>
             <div class="text-muted mt-2">Available competitions</div>
           </div>
         </a>
@@ -131,15 +116,15 @@
 
       <div class="col-sm-6 col-lg-3">
         <a
-          href="{% if is_manager %}{% url 'portal_course_submit_confirm' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
-          class="card text-decoration-none h-100 kpi-card "
+          href="{% if is_manager %}{% url 'portal_course_submission_inbox' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
+          class="card text-decoration-none h-100 kpi-card"
         >
           <div class="card-body">
             <div class="subheader">
-              {% if is_manager %}Course Submissions{% else %}Registration Status{% endif %}
+              {% if is_manager %}Submission Inbox{% else %}Registration Status{% endif %}
             </div>
 
-            <div class="h1 mb-2">{{ course_count|default:"—" }}</div>
+            <div class="h1 mb-2">{{ course_total|default:"—" }}</div>
 
             <div class="kpi-badges">
               <span class="badge bg-blue-lt">Draft: {{ course_draft_count|default:"0" }}</span>
@@ -149,7 +134,7 @@
 
             <div class="text-muted mt-2">
               {% if is_manager %}
-                Review drafts and submit to admin
+                Submit draft applications to admin
               {% else %}
                 Track your draft/submitted enrollments
               {% endif %}
@@ -159,7 +144,7 @@
       </div>
 
       <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card kpi-soft-slate">
+        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
           <div class="card-body">
             <div class="subheader">Competition Registrations</div>
             <div class="h1 mb-0">—</div>
@@ -177,9 +162,7 @@
       <div class="card-header">
         <h3 class="card-title">Recent Students</h3>
         <div class="card-actions">
-          <a href="{% url 'portal_student_list' %}" class="btn btn-outline-primary btn-sm">
-            View all
-          </a>
+          <a href="{% url 'portal_student_list' %}" class="btn btn-outline-primary btn-sm">View all</a>
         </div>
       </div>
 
@@ -200,17 +183,11 @@
                 <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
                 <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
                 <td class="text-end">
-                  <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_student_edit' s.pk %}">
-                    Edit
-                  </a>
+                  <a class="btn btn-sm btn-outline-primary" href="{% url 'portal_student_edit' s.pk %}">Edit</a>
                 </td>
               </tr>
             {% empty %}
-              <tr>
-                <td colspan="4" class="text-center text-muted py-4">
-                  No students yet.
-                </td>
-              </tr>
+              <tr><td colspan="4" class="text-center text-muted py-4">No students yet.</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -221,20 +198,14 @@
   {# ✅ Current Open Events #}
   <div class="col-12">
     <div class="card">
-      <div class="card-header">
-        <h3 class="card-title">Current Open Events</h3>
-      </div>
+      <div class="card-header"><h3 class="card-title">Current Open Events</h3></div>
       <div class="card-body">
         {% if open_events %}
           <div class="table-responsive">
             <table class="table table-vcenter">
               <thead>
                 <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>City</th>
-                  <th>Deadline</th>
-                  <th>Status</th>
+                  <th>Code</th><th>Name</th><th>City</th><th>Deadline</th><th>Status</th>
                 </tr>
               </thead>
               <tbody>

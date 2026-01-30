@@ -8,6 +8,9 @@ from django.db import transaction
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.views.decorators.http import require_POST
+from django.db.models import Count
+from django.http import HttpResponseForbidden
+
 
 
 
@@ -655,10 +658,7 @@ def course_enrollment_submit_selected(request):
 
     messages.success(request, f"Submitted {updated} enrollment(s) for admin approval.")
     return redirect("portal_course_enrollment_list")
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.http import HttpResponseForbidden
-from django.db.models import Count
+
 
 @login_required
 def portal_course_submission_inbox(request):
@@ -666,16 +666,13 @@ def portal_course_submission_inbox(request):
 
     if is_admin(user):
         return redirect("/admin/")
-
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
-
     if not is_manager(user):
         return HttpResponseForbidden("Manager access required")
 
     org = user.organization
 
-    # Courses that have drafts for THIS organization
     rows = (
         CourseEnrollment.objects
         .filter(organization=org, status="DRAFT", course__is_active=True)
@@ -684,7 +681,6 @@ def portal_course_submission_inbox(request):
         .order_by("course__level", "course__name")
     )
 
-    # Totals for KPI
     total_drafts = sum(r["draft_count"] for r in rows) if rows else 0
     course_with_drafts = len(rows)
 

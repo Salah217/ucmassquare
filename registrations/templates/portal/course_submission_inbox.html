@@ -6,48 +6,36 @@
   <div class="row align-items-center">
     <div class="col">
       <h2 class="page-title">Submission Inbox</h2>
-      <div class="text-muted mt-1">
-        Draft course enrollments waiting for manager submission
-      </div>
+      <div class="text-muted mt-1">Draft course applications waiting for manager submission.</div>
     </div>
-
     <div class="col-auto ms-auto">
-      <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-primary">
-        Back to Dashboard
-      </a>
+      <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-primary">Back to Dashboard</a>
     </div>
   </div>
 </div>
 
 <div class="row row-deck row-cards mb-3">
-  <div class="col-sm-6 col-lg-3">
-    <div class="card h-100">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
       <div class="card-body">
         <div class="subheader">Courses with drafts</div>
         <div class="h1 mb-0">{{ course_with_drafts }}</div>
-        <div class="text-muted mt-2">Need your review</div>
       </div>
     </div>
   </div>
-
-  <div class="col-sm-6 col-lg-3">
-    <div class="card h-100">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
       <div class="card-body">
         <div class="subheader">Total draft enrollments</div>
         <div class="h1 mb-0">{{ total_drafts }}</div>
-        <div class="text-muted mt-2">Across all courses</div>
       </div>
     </div>
   </div>
-
-  <div class="col-sm-12 col-lg-6">
-    <div class="card h-100">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card">
       <div class="card-body">
-        <div class="subheader">How it works</div>
-        <div class="text-muted mt-2">
-          1) Open a course → 2) Review selected students → 3) Submit to Admin.
-          After submission, status changes from <strong>DRAFT</strong> to <strong>SUBMITTED</strong>.
-        </div>
+        <div class="subheader">Next step</div>
+        <div class="text-muted">Open a course to review and submit drafts to admin.</div>
       </div>
     </div>
   </div>
@@ -55,51 +43,46 @@
 
 <div class="card">
   <div class="card-header">
-    <h3 class="card-title mb-0">Courses waiting for submission</h3>
+    <h3 class="card-title">Courses ready to submit</h3>
+    <div class="card-actions">
+      <a href="{% url 'portal_course_enrollment_list' %}" class="btn btn-outline-secondary btn-sm">
+        All Enrollments
+      </a>
+    </div>
   </div>
 
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
       <thead>
         <tr>
-          <th>Course</th>
           <th>Level</th>
-          <th>Fee</th>
-          <th>Draft enrollments</th>
-          <th class="w-1"></th>
+          <th>Course</th>
+          <th class="text-center">Draft count</th>
+          <th class="text-end"></th>
         </tr>
       </thead>
       <tbody>
         {% for r in rows %}
         <tr>
-          <td class="fw-semibold">{{ r.course__name }}</td>
           <td><span class="badge bg-blue-lt">Level {{ r.course__level }}</span></td>
-          <td class="text-muted">
-            {% if r.course__fee %}{{ r.course__fee }} SAR{% else %}—{% endif %}
-          </td>
-          <td>
-            <span class="badge bg-yellow-lt">{{ r.draft_count }} Draft</span>
-          </td>
+          <td class="fw-semibold">{{ r.course__name }}</td>
+          <td class="text-center"><span class="badge bg-yellow-lt">{{ r.draft_count }}</span></td>
           <td class="text-end">
-            <a class="btn btn-sm btn-primary"
+            <a class="btn btn-primary btn-sm"
                href="{% url 'portal_course_submit_confirm' %}?course_id={{ r.course_id }}">
-              Open
+              Review & Submit
             </a>
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="text-center text-muted py-4">
-            No draft enrollments right now 🎉
+          <td colspan="4" class="text-center text-muted py-4">
+            No draft enrollments found.
           </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-  </div>
-
-  <div class="card-footer text-muted">
-    Tip: Open a course and submit only the students you want to send to admin.
   </div>
 </div>
 {% endblock %}
