@@ -1,0 +1,29 @@
+{% extends "portal/layout.html" %}
+{% block title %}Submission Confirmed | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Submission Confirmed</h2>
+      <div class="text-muted mt-1">
+        Event: <strong>{{ event.code }}</strong> — {{ event.name }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <p class="mb-2">Students submitted: <strong>{{ created_count }}</strong></p>
+
+    {% if total_amount %}
+      <p class="mb-3">Total amount: <strong>{{ total_amount }}</strong></p>
+    {% endif %}
+
+    <a href="{% url 'portal_competition_inbox' %}?event_id={{ event.id }}" class="btn btn-primary">
+      Back to Inbox
+    </a>
+  </div>
+</div>
+{% endblock %}
