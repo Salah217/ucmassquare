@@ -1,45 +1,59 @@
 {% extends "portal/layout.html" %}
-{% block title %}Manager Submit | UCMAS{% endblock %}
+{% block title %}Submission Inbox | UCMAS{% endblock %}
 
 {% block content %}
 <div class="page-header d-print-none">
   <div class="row align-items-center">
     <div class="col">
-      <h2 class="page-title">Manager Submit</h2>
+      <h2 class="page-title">Submission Inbox</h2>
       <div class="text-muted mt-1">
         Course: <strong>{{ course }}</strong>
+        <span class="ms-2 text-muted">· Level {{ course.level }}</span>
       </div>
     </div>
-    <div class="col-auto ms-auto">
-      <a href="{% url 'portal_course_enrollment_list' %}" class="btn btn-outline-primary">Back</a>
+
+    <div class="col-auto ms-auto d-flex gap-2">
+      <a href="{% url 'portal_course_submission_inbox' %}" class="btn btn-outline-primary">
+        Back to Inbox
+      </a>
+      <a href="{% url 'portal_course_enrollment_list' %}" class="btn btn-outline-secondary">
+        All Enrollments
+      </a>
     </div>
   </div>
 </div>
 
 <div class="row row-deck row-cards mb-3">
   <div class="col-sm-6 col-lg-4">
-    <div class="card">
+    <div class="card h-100">
       <div class="card-body">
         <div class="subheader">Draft enrollments</div>
         <div class="h1 mb-0">{{ selected_count }}</div>
+        <div class="text-muted mt-2">Total drafts available for this course</div>
       </div>
     </div>
   </div>
 
   <div class="col-sm-6 col-lg-4">
-    <div class="card">
+    <div class="card h-100">
       <div class="card-body">
         <div class="subheader">Fee per student</div>
         <div class="h1 mb-0">{{ fee_per_student }} SAR</div>
+        <div class="text-muted mt-2">From course settings</div>
       </div>
     </div>
   </div>
 
   <div class="col-sm-6 col-lg-4">
-    <div class="card">
+    <div class="card h-100">
       <div class="card-body">
-        <div class="subheader">Total</div>
-        <div class="h1 mb-0">{{ total_amount }} SAR</div>
+        <div class="subheader">Total selected</div>
+        <div class="h1 mb-0">
+          <span id="total-amount">{{ total_amount }}</span> SAR
+        </div>
+        <div class="text-muted mt-2">
+          <span id="selected-count">{{ selected_count }}</span> selected × {{ fee_per_student }} SAR
+        </div>
       </div>
     </div>
   </div>
@@ -48,12 +62,18 @@
 <form method="post" action="{% url 'portal_course_submit_final' %}">
   {% csrf_token %}
   <input type="hidden" name="course_id" value="{{ course.id }}">
+  <input type="hidden" id="fee-per-student" value="{{ fee_per_student|default:0 }}">
 
   <div class="card">
     <div class="card-header">
       <h3 class="card-title mb-0">Draft students</h3>
-      <div class="card-actions">
-        <label class="form-check">
+
+      <div class="card-actions d-flex align-items-center gap-3">
+        <span class="text-muted small" id="hint-none" style="display:none;">
+          Select at least one student to submit.
+        </span>
+
+        <label class="form-check m-0">
           <input class="form-check-input" type="checkbox" id="check-all">
           <span class="form-check-label">Select all</span>
         </label>
@@ -68,39 +88,97 @@
             <th>Registration No</th>
             <th>Student</th>
             <th>Level</th>
+            <th>Guardian</th>
+            <th>Status</th>
           </tr>
         </thead>
+
         <tbody>
           {% for e in drafts %}
           <tr>
             <td>
-              <input class="form-check-input row-check" type="checkbox" name="selected_ids" value="{{ e.id }}" checked>
+              <input
+                class="form-check-input row-check"
+                type="checkbox"
+                name="selected_ids"
+                value="{{ e.id }}"
+                checked
+              >
             </td>
+
             <td class="text-muted">{{ e.student.sa_registration_no }}</td>
-            <td class="fw-semibold">{{ e.student.first_name_en }} {{ e.student.last_name_en }}</td>
+
+            <td>
+              <div class="fw-semibold">{{ e.student.first_name_en }} {{ e.student.last_name_en }}</div>
+              <div class="text-muted small">Student ID: {{ e.student.id }}</div>
+            </td>
+
             <td><span class="badge bg-blue-lt">Level {{ e.student.current_level }}</span></td>
+
+            <td class="text-muted">
+              {{ e.student.guardian_name|default:"—" }}{% if e.student.guardian_phone %} · {{ e.student.guardian_phone }}{% endif %}
+            </td>
+
+            <td><span class="badge bg-azure-lt">{{ e.status }}</span></td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="4" class="text-center text-muted py-4">No draft enrollments found.</td>
+            <td colspan="6" class="text-center text-muted py-4">No draft enrollments found.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <div class="card-footer d-flex justify-content-end">
-      <button type="submit" class="btn btn-danger">Submit selected </button>
+    <div class="card-footer d-flex justify-content-between align-items-center">
+      <div class="text-muted">
+        Submitting will change status from <strong>DRAFT</strong> → <strong>SUBMITTED</strong> for selected enrollments.
+      </div>
+
+      <button type="submit" class="btn btn-danger" id="btn-submit">
+        Submit Selected to Admin
+      </button>
     </div>
   </div>
 </form>
 
 <script>
   const checkAll = document.getElementById("check-all");
+  const feeInput = document.getElementById("fee-per-student");
+  const totalEl = document.getElementById("total-amount");
+  const countEl = document.getElementById("selected-count");
+  const btnSubmit = document.getElementById("btn-submit");
+  const hintNone = document.getElementById("hint-none");
+
+  function getSelectedCount() {
+    return document.querySelectorAll(".row-check:checked").length;
+  }
+
+  function updateTotals() {
+    const fee = parseFloat(feeInput?.value || "0") || 0;
+    const selected = getSelectedCount();
+    const total = selected * fee;
+
+    countEl.textContent = selected.toString();
+    totalEl.textContent = total.toString();
+
+    const hasAny = selected > 0;
+    btnSubmit.disabled = !hasAny;
+    hintNone.style.display = hasAny ? "none" : "inline";
+  }
+
   if (checkAll) {
     checkAll.addEventListener("change", function () {
       document.querySelectorAll(".row-check").forEach(cb => cb.checked = checkAll.checked);
+      updateTotals();
     });
   }
+
+  document.querySelectorAll(".row-check").forEach(cb => {
+    cb.addEventListener("change", updateTotals);
+  });
+
+  // Initial state
+  updateTotals();
 </script>
 {% endblock %}

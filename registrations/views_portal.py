@@ -655,6 +655,44 @@ def course_enrollment_submit_selected(request):
 
     messages.success(request, f"Submitted {updated} enrollment(s) for admin approval.")
     return redirect("portal_course_enrollment_list")
+
+@login_required
+def portal_course_submission_inbox(request):
+
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+       return render(request, "portal/no_organization.html")
+    if not is_manager(user):
+      return HttpResponseForbidden("Manager access required")
+
+
+    org = user.organization
+
+
+# Courses that have drafts for THIS organization
+   rows = (
+          CourseEnrollment.objects
+         .filter(organization=org, status="DRAFT", course__is_active=True)
+         .values("course_id", "course__name", "course__level", "course__fee")
+         .annotate( draft_count=Count("id"),)
+        .order_by("course__level", "course__name")
+         )
+
+
+# Totals for KPI
+   total_drafts = sum(r["draft_count"] for r in rows) if rows else 0
+   course_with_drafts = len(rows)
+
+
+   return render(request, "portal/course_submission_inbox.html", {
+   "rows": rows,
+   "total_drafts": total_drafts,
+    "course_with_drafts": course_with_drafts,
+    "is_manager": True,
+     })
+
 # =========================================================
 # COMPETITION REGISTRATION (EventRegistration)
 # =========================================================
