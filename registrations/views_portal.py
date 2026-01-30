@@ -667,31 +667,29 @@ def portal_course_submission_inbox(request):
     if not is_manager(user):
       return HttpResponseForbidden("Manager access required")
 
-
     org = user.organization
 
-
 # Courses that have drafts for THIS organization
-   rows = (
+    rows = (
           CourseEnrollment.objects
          .filter(organization=org, status="DRAFT", course__is_active=True)
          .values("course_id", "course__name", "course__level", "course__fee")
          .annotate( draft_count=Count("id"),)
-        .order_by("course__level", "course__name")
-         )
+         .order_by("course__level", "course__name")
+           )
 
 
 # Totals for KPI
-   total_drafts = sum(r["draft_count"] for r in rows) if rows else 0
-   course_with_drafts = len(rows)
+    total_drafts = sum(r["draft_count"] for r in rows) if rows else 0
+    course_with_drafts = len(rows)
 
 
    return render(request, "portal/course_submission_inbox.html", {
-   "rows": rows,
-   "total_drafts": total_drafts,
-    "course_with_drafts": course_with_drafts,
-    "is_manager": True,
-     })
+       "rows": rows,
+       "total_drafts": total_drafts,
+       "course_with_drafts": course_with_drafts,
+       "is_manager": True,
+    })
 
 # =========================================================
 # COMPETITION REGISTRATION (EventRegistration)
