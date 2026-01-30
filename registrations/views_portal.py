@@ -86,6 +86,7 @@ def portal_dashboard(request):
         "open_events_count": len(open_events),
         "course_draft_count": course_draft_count,
         "course_submitted_count": course_submitted_count,
+        "total_students": total_students,
     }
     return render(request, "portal/dashboard.html", ctx)
 
