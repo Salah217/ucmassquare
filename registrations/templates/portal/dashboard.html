@@ -47,7 +47,7 @@
 <div class="row row-deck row-cards">
 
   {# =======================
-     1) MODULES (TOP ROW)
+     (1) MODULES (TOP ROW)
      ======================= #}
   <div class="col-12">
     <div class="row g-3">
@@ -84,7 +84,88 @@
 
     </div>
   </div>
+  {# =======================
+     (2) KPIs (SECOND ROW)
+     ======================= #}
 
+  <style>
+    .kpi-card{
+      border-radius: 14px;
+      min-height: 150px;
+      border: 1px solid rgba(0,0,0,.06);
+    }
+    .kpi-soft-blue   { background: rgba(32,107,196,.10); }
+    .kpi-soft-green  { background: rgba(47,179,68,.10); }
+    .kpi-soft-yellow { background: rgba(245,159,0,.12); }
+    .kpi-soft-slate  { background: rgba(15,23,42,.04); }
+    .kpi-badges{ display:flex; gap:.5rem; flex-wrap:wrap; }
+  </style>
+
+  <div class="col-12 mt-3">
+    <div class="row g-3">
+
+      <div class="col-sm-6 col-lg-3">
+        <a href="{% url 'portal_student_list' %}" class="card text-decoration-none h-100 kpi-card kpi-soft-green">
+          <div class="card-body">
+            <div class="subheader">Total Students</div>
+            <div class="h1 mb-0">{{ total_students|default:"—" }}</div>
+            <div class="text-muted mt-2">Students in your school database</div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card kpi-soft-blue">
+          <div class="card-body">
+            <div class="subheader">Open Competitions</div>
+            <div class="h1 mb-0">{{ open_events|length|default:"0" }}</div>
+            <div class="text-muted mt-2">Available competitions</div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <a
+          href="{% if is_manager %}{% url 'portal_course_submit_confirm' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
+          class="card text-decoration-none h-100 kpi-card kpi-soft-yellow"
+        >
+          <div class="card-body">
+            <div class="subheader">
+              {% if is_manager %}Course Submissions{% else %}Registration Status{% endif %}
+            </div>
+
+            <div class="h1 mb-2">{{ course_count|default:"—" }}</div>
+
+            <div class="kpi-badges">
+              <span class="badge bg-blue-lt">Draft: {{ course_draft_count|default:"0" }}</span>
+              <span class="badge bg-yellow-lt">Submitted: {{ course_submitted_count|default:"0" }}</span>
+              <span class="badge bg-green-lt">Accepted: {{ course_accepted_count|default:"0" }}</span>
+            </div>
+
+            <div class="text-muted mt-2">
+              {% if is_manager %}
+                Review drafts and submit to admin
+              {% else %}
+                Track your draft/submitted enrollments
+              {% endif %}
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-sm-6 col-lg-3">
+        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card kpi-soft-slate">
+          <div class="card-body">
+            <div class="subheader">Competition Registrations</div>
+            <div class="h1 mb-0">—</div>
+            <div class="text-muted mt-2">Payments & approvals</div>
+          </div>
+        </a>
+      </div>
+
+    </div>
+  </div>
+  
   {# ✅ Recent Students #}
   <div class="col-12 mt-3">
     <div class="card">
