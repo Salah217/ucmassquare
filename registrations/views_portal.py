@@ -774,6 +774,7 @@ def competition_register_confirm(request):
         "total_fee": total_fee,
         "is_manager": is_manager(user),
     })
+    
 @login_required
 def competition_submit_confirm(request):
     user = request.user
@@ -791,6 +792,15 @@ def competition_submit_confirm(request):
 
     event = get_object_or_404(Event, pk=event_id)
 
+    submitted = request.GET.get("submitted")
+    try:
+        submitted = int(submitted) if submitted is not None else None
+    except ValueError:
+        submitted = None
+
+    fee_per_student = event.fee_per_student or 0
+
+    # Always show current drafts for review table
     regs = (
         EventRegistration.objects
         .filter(organization=user.organization, event=event, status="DRAFT")
@@ -798,16 +808,20 @@ def competition_submit_confirm(request):
         .order_by("-created_at")
     )
 
-    count = regs.count()
-    fee_per_student = event.fee_per_student or 0
-    total_amount = fee_per_student * count
+    draft_count = regs.count()
+
+    # If we just submitted, show the submitted count on the page (not draft_count)
+    display_count = submitted if submitted is not None else draft_count
+    total_amount = fee_per_student * display_count
 
     return render(request, "portal/competition_submit_confirm.html", {
         "event": event,
         "regs": regs,
-        "count": count,
+        "count": draft_count,              # drafts remaining (table)
+        "created_count": display_count,    # KPI number to display
         "fee_per_student": fee_per_student,
         "total_amount": total_amount,
+        "just_submitted": submitted is not None,
     })
 
 
