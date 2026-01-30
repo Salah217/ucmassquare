@@ -143,14 +143,15 @@
         </a>
       </div>
 
-     <div class="col-sm-6 col-lg-3">
+<div class="col-sm-6 col-lg-3">
   <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
-        
-    
+
+    <!-- ✅ status line -->
+    <div class="card-status-top bg-primary"></div>
 
     <div class="card-body">
       <div class="subheader">Competition Registrations</div>
-      <div class="card-status-top bg-primary"></div>
+
       <div class="mt-2 d-flex flex-wrap gap-2">
         <span class="badge bg-blue-lt">
           Draft: {{ comp_draft_count|default:"0" }}
@@ -169,6 +170,7 @@
     </div>
   </a>
 </div>
+
 
 
   {# ✅ Recent Students #}
