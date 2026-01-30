@@ -10,9 +10,15 @@
       <div class="text-muted mt-1">Track enrollments and filter by status.</div>
     </div>
     <div class="col-auto ms-auto d-flex gap-2">
-      <a href="{% url 'portal_course_register' %}" class="btn btn-primary">
-        Register in a Course
-      </a>
+      {% if is_manager %}
+        <a href="{% url 'portal_course_submission_inbox' %}" class="btn btn-primary">
+          Submission Inbox
+        </a>
+     {% else %}
+        <a href="{% url 'portal_course_register' %}" class="btn btn-primary">
+          Register in a Course
+        </a>
+     {% endif %}
     </div>
   </div>
 </div>
