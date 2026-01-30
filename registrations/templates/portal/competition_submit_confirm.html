@@ -2,28 +2,73 @@
 {% block title %}Submission Confirmed | UCMAS{% endblock %}
 
 {% block content %}
+
 <div class="page-header d-print-none">
   <div class="row align-items-center">
     <div class="col">
-      <h2 class="page-title">Submission Confirmed</h2>
+      <h2 class="page-title">Submission Completed</h2>
       <div class="text-muted mt-1">
-        Event: <strong>{{ event.code }}</strong> — {{ event.name }}
+        Your competition registrations were successfully submitted.
       </div>
+    </div>
+    <div class="col-auto ms-auto">
+      <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-primary">
+        Dashboard
+      </a>
     </div>
   </div>
 </div>
 
-<div class="card">
-  <div class="card-body">
-    <p class="mb-2">Students submitted: <strong>{{ created_count }}</strong></p>
+<style>
+.confirm-card{
+  border-radius:16px;
+  border:1px solid rgba(0,0,0,.06);
+  background: linear-gradient(180deg,#f8fbff,#ffffff);
+}
+.confirm-icon{
+  width:64px;
+  height:64px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  background: rgba(46, 204, 113, .15);
+  color:#2ecc71;
+}
+.stat-box{
+  border-radius:12px;
+  padding:14px;
+  background: rgba(32,107,196,.08);
+}
+</style>
 
-    {% if total_amount %}
-      <p class="mb-3">Total amount: <strong>{{ total_amount }}</strong></p>
-    {% endif %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
 
-    <a href="{% url 'portal_competition_submission_inbox' %}" class="btn btn-primary">
-      Back to Inbox
-    </a>
-  </div>
-</div>
-{% endblock %}
+    <div class="card confirm-card">
+      <div class="card-body text-center p-5">
+
+        <div class="confirm-icon mx-auto mb-3">
+          ✓
+        </div>
+
+        <h3 class="mb-1">Submission Confirmed</h3>
+        <div class="text-muted mb-4">
+          Event: <strong>{{ event.code }}</strong> — {{ event.name }}
+        </div>
+
+        <div class="row g-3 mb-4">
+
+          <div class="col-md-6">
+            <div class="stat-box">
+              <div class="text-muted small">Students Submitted</div>
+              <div class="h2 mb-0">{{ created_count }}</div>
+            </div>
+          </div>
+
+          {% if total_amount %}
+          <div class="col-md-6">
+            <div class="stat-box">
+              <div class="text-muted small">Total Amount</div>
+              <div class="h2 mb-0">{{ total_a_
