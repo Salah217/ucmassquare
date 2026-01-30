@@ -143,18 +143,30 @@
         </a>
       </div>
 
-      <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
-          <div class="card-body">
-            <div class="subheader">Competition Registrations</div>
-            <div class="h1 mb-0">—</div>
-            <div class="text-muted mt-2">Payments & approvals</div>
-          </div>
-        </a>
+     <div class="col-sm-6 col-lg-3">
+  <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
+    <div class="card-body">
+      <div class="subheader">Competition Registrations</div>
+
+      <div class="mt-2 d-flex flex-wrap gap-2">
+        <span class="badge bg-blue-lt">
+          Draft: {{ comp_draft_count|default:"0" }}
+        </span>
+
+        <span class="badge bg-yellow-lt">
+          Unpaid: {{ comp_unpaid_count|default:"0" }}
+        </span>
+
+        <span class="badge bg-green-lt">
+          Paid: {{ comp_paid_count|default:"0" }}
+        </span>
       </div>
 
+      <div class="text-muted mt-2">Payments & approvals</div>
     </div>
-  </div>
+  </a>
+</div>
+
 
   {# ✅ Recent Students #}
   <div class="col-12 mt-3">

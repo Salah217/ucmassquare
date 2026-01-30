@@ -35,8 +35,7 @@ def is_manager(user):
 
 # ---------------------------
 # Dashboard
-# ---------------------------
-@login_required
+# ---------------------------@login_required
 def portal_dashboard(request):
     org = getattr(request.user, "organization", None)
     today = timezone.now().date()
@@ -59,6 +58,29 @@ def portal_dashboard(request):
             organization=org, status="SUBMITTED"
         ).count()
 
+    # ✅ ---- COMPETITION REGISTRATION COUNTS (per org) ----
+    comp_draft_count = 0
+    comp_unpaid_count = 0
+    comp_paid_count = 0
+    comp_accepted_count = 0
+
+    if org:
+        comp_draft_count = EventRegistration.objects.filter(
+            organization=org, status="DRAFT"
+        ).count()
+
+        comp_unpaid_count = EventRegistration.objects.filter(
+            organization=org, status="PENDING_PAYMENT"
+        ).count()
+
+        comp_paid_count = EventRegistration.objects.filter(
+            organization=org, status="PAID"
+        ).count()
+
+        comp_accepted_count = EventRegistration.objects.filter(
+            organization=org, status="ACCEPTED"
+        ).count()
+
     # ---- OPEN COURSES ----
     open_courses = (
         Course.objects
@@ -77,16 +99,28 @@ def portal_dashboard(request):
 
     ctx = {
         "org": org,
-        "total_students": total_students,   # ✅ NOW DEFINED
+        "total_students": total_students,
+
+        # courses
+        "course_draft_count": course_draft_count,
+        "course_submitted_count": course_submitted_count,
+
+        # ✅ competitions
+        "comp_draft_count": comp_draft_count,
+        "comp_unpaid_count": comp_unpaid_count,
+        "comp_paid_count": comp_paid_count,
+        "comp_accepted_count": comp_accepted_count,
+
+        # lists
         "open_courses": open_courses,
         "open_events": open_events,
         "notices": notices,
         "open_courses_count": len(open_courses),
         "open_events_count": len(open_events),
-        "course_draft_count": course_draft_count,
-        "course_submitted_count": course_submitted_count,
     }
+
     return render(request, "portal/dashboard.html", ctx)
+
 
 # ---------------------------
 # Student list (permanent DB)
@@ -774,7 +808,7 @@ def competition_register_confirm(request):
         "total_fee": total_fee,
         "is_manager": is_manager(user),
     })
-    
+
 @login_required
 def competition_submit_confirm(request):
     user = request.user
