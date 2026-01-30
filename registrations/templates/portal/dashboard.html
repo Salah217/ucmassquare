@@ -46,9 +46,7 @@
 
 <div class="row row-deck row-cards">
 
-  {# =======================
-     (1) MODULES (TOP ROW)
-     ======================= #}
+ 
   <div class="col-12">
     <div class="row g-3">
 
@@ -84,28 +82,35 @@
 
     </div>
   </div>
-  {# =======================
-     (2) KPIs (SECOND ROW)
-     ======================= #}
 
-  <style>
-    .kpi-card{
-      border-radius: 14px;
-      min-height: 150px;
-      border: 1px solid rgba(0,0,0,.06);
-    }
-    .kpi-soft-blue   { background: rgba(32,107,196,.10); }
-    .kpi-soft-green  { background: rgba(47,179,68,.10); }
-    .kpi-soft-yellow { background: rgba(245,159,0,.12); }
-    .kpi-soft-slate  { background: rgba(15,23,42,.04); }
-    .kpi-badges{ display:flex; gap:.5rem; flex-wrap:wrap; }
-  </style>
+
+<style>
+  .kpi-card{
+    border-radius: 14px;
+    min-height: 150px;
+    border: 1px solid rgba(0,0,0,.08);
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.04);
+    transition: .12s ease;
+  }
+
+  .kpi-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0,0,0,.08);
+  }
+
+  .kpi-badges{
+    display:flex;
+    gap:.5rem;
+    flex-wrap:wrap;
+  }
+</style>
 
   <div class="col-12 mt-3">
     <div class="row g-3">
 
       <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_student_list' %}" class="card text-decoration-none h-100 kpi-card kpi-soft-green">
+        <a href="{% url 'portal_student_list' %}" class="card text-decoration-none h-100 kpi-card ">
           <div class="card-body">
             <div class="subheader">Total Students</div>
             <div class="h1 mb-0">{{ total_students|default:"—" }}</div>
@@ -115,7 +120,7 @@
       </div>
 
       <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card kpi-soft-blue">
+        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card ">
           <div class="card-body">
             <div class="subheader">Open Competitions</div>
             <div class="h1 mb-0">{{ open_events|length|default:"0" }}</div>
@@ -127,7 +132,7 @@
       <div class="col-sm-6 col-lg-3">
         <a
           href="{% if is_manager %}{% url 'portal_course_submit_confirm' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
-          class="card text-decoration-none h-100 kpi-card kpi-soft-yellow"
+          class="card text-decoration-none h-100 kpi-card "
         >
           <div class="card-body">
             <div class="subheader">
@@ -165,7 +170,7 @@
 
     </div>
   </div>
-  
+
   {# ✅ Recent Students #}
   <div class="col-12 mt-3">
     <div class="card">
