@@ -13,7 +13,6 @@ from django.http import HttpResponseForbidden
 
 
 
-
 from .models import Student, Event, Course, CourseEnrollment, EventRegistration
 from .forms import (
     StudentForm,
@@ -836,7 +835,9 @@ def competition_submit_final(request):
 
     if not selected_ids:
         messages.warning(request, "Please select at least one draft registration.")
-        return redirect("portal_competition_submit_confirm") + f"?event_id={event.id}"
+        return HttpResponseRedirect(
+            reverse("portal_competition_submit_confirm") + f"?event_id={event.id}"
+        )
 
     now = timezone.now()
     fee_per_student = event.fee_per_student or 0
@@ -861,3 +862,47 @@ def competition_submit_final(request):
         f"Submitted {updated} registration(s). Total due: {fee_per_student * updated:.2f} SAR."
     )
     return redirect("portal_dashboard")
+
+@login_required
+def competition_submission_inbox(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+    if not is_manager(user):
+        return render(request, "portal/forbidden.html", status=403)
+
+    org = user.organization
+    event_id = request.GET.get("event_id")  # optional filter
+
+    qs = (
+        EventRegistration.objects
+        .filter(organization=org, status="DRAFT", event__status="OPEN")
+    )
+
+    if event_id:
+        qs = qs.filter(event_id=event_id)
+
+    rows = (
+        qs.values(
+            "event_id",
+            "event__code",
+            "event__name",
+            "event__deadline",
+            "event__fee_per_student",
+        )
+        .annotate(draft_count=Count("id"))
+        .order_by("event__deadline", "event__name")
+    )
+
+    total_drafts = sum(r["draft_count"] for r in rows) if rows else 0
+    events_with_drafts = len(rows)
+
+    return render(request, "portal/competition_submission_inbox.html", {
+        "rows": rows,
+        "total_drafts": total_drafts,
+        "events_with_drafts": events_with_drafts,
+        "is_manager": True,
+        "filtered_event_id": event_id,
+    })

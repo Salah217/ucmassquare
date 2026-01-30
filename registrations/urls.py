@@ -52,4 +52,6 @@ urlpatterns = [
 
     path("competitions/submit/confirm/", v.competition_submit_confirm, name="portal_competition_submit_confirm"),
     path("competitions/submit/final/", v.competition_submit_final, name="portal_competition_submit_final"),
+    path("competitions/submission-inbox/", v.competition_submission_inbox, name="portal_competition_submission_inbox"),
+
 ]

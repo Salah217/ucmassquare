@@ -1,0 +1,118 @@
+{% extends "portal/layout.html" %}
+{% block title %}Competition Submission Inbox | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Competition Submission Inbox</h2>
+      <div class="text-muted mt-1">
+        Managers only: choose an event to review <strong>DRAFT</strong> registrations, then submit them to Admin.
+      </div>
+    </div>
+    <div class="col-auto ms-auto">
+      <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-primary">Back</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .kpi-card{
+    border-radius:14px;
+    min-height:140px;
+    border:1px solid rgba(0,0,0,.06);
+  }
+  .kpi-card .card-body{ padding:18px; }
+
+  /* Soft logo colors */
+  .kpi-soft-blue   { background: rgba(32,107,196,.10); }
+  .kpi-soft-yellow { background: rgba(245,159,0,.12); }
+
+  .hint-box{
+    border-radius:14px;
+    border:1px solid rgba(0,0,0,.06);
+    background: rgba(32,107,196,.06);
+    padding: 14px 16px;
+  }
+</style>
+
+<div class="hint-box mb-3">
+  <div class="fw-semibold mb-1">How it works</div>
+  <div class="text-muted">
+    Staff create drafts. Managers submit drafts to Admin from here.
+    Status flow:
+    <strong>DRAFT → SUBMITTED → PENDING_PAYMENT → PAID → ACCEPTED</strong>.
+  </div>
+</div>
+
+<div class="row row-deck row-cards mb-3">
+  <div class="col-sm-6 col-lg-4">
+    <div class="card kpi-card kpi-soft-blue h-100">
+      <div class="card-body">
+        <div class="subheader">Events with drafts</div>
+        <div class="h1 mb-0">{{ events_with_drafts|default:"0" }}</div>
+        <div class="text-muted mt-2">Events that have draft registrations</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-4">
+    <div class="card kpi-card kpi-soft-yellow h-100">
+      <div class="card-body">
+        <div class="subheader">Total draft registrations</div>
+        <div class="h1 mb-0">{{ total_drafts|default:"0" }}</div>
+        <div class="text-muted mt-2">Draft registrations waiting for submission</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title mb-0">Drafts by Event</h3>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Deadline</th>
+          <th>Fee / student</th>
+          <th>Drafts</th>
+          <th class="w-1"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="fw-semibold">
+            <span class="badge bg-blue-lt">{{ r.event__code }}</span>
+            {{ r.event__name }}
+          </td>
+          <td class="text-muted">{{ r.event__deadline|default:"-" }}</td>
+          <td>
+            {{ r.event__fee_per_student|default:"0" }} <span class="text-muted">SAR</span>
+          </td>
+          <td>
+            <span class="badge bg-yellow-lt">{{ r.draft_count }}</span>
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-primary"
+               href="{% url 'portal_competition_submit_confirm' %}?event_id={{ r.event_id }}">
+              Review & Submit
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            No draft registrations found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,12 +1,11 @@
 {% extends "portal/layout.html" %}
-
 {% block title %}Course Draft Created | UCMAS{% endblock %}
 
 {% block content %}
 <div class="page-header d-print-none">
   <div class="row align-items-center">
     <div class="col">
-      <h2 class="page-title">Course application is Created</h2>
+      <h2 class="page-title">Course Draft Created</h2>
       <div class="text-muted mt-1">
         Draft prepared for <strong>{{ course }}</strong>.
         {% if created_count %} Added <strong>{{ created_count }}</strong> new student(s).{% endif %}
@@ -21,18 +20,33 @@
       </a>
 
       {% if is_manager %}
+        {# Preferred: inbox (manager chooses submit ALL or by course) #}
+        <a href="{% url 'portal_course_submission_inbox' %}" class="btn btn-primary">
+          Open Submission Inbox
+        </a>
+
+        {# Optional: quick-submit for this course only (keep if you want) #}
         <a href="{% url 'portal_course_submit_confirm' %}?course_id={{ course.id }}" class="btn btn-danger">
-          Manager Submit
+          Submit This Course
+        </a>
+      {% else %}
+        <a href="{% url 'portal_course_enrollment_list' %}" class="btn btn-primary">
+          View Registration Status
         </a>
       {% endif %}
     </div>
   </div>
 </div>
 
+<style>
+  .kpi-card{ border-radius:14px; min-height:140px; border:1px solid rgba(0,0,0,.06); }
+  .kpi-card .card-body{ padding:18px; }
+</style>
+
 <div class="row row-deck row-cards mb-3">
 
   <div class="col-sm-6 col-lg-3">
-    <div class="card">
+    <div class="card kpi-card">
       <div class="card-body">
         <div class="subheader">Selected students</div>
         <div class="h1 mb-0">{{ students|length }}</div>
@@ -42,17 +56,23 @@
   </div>
 
   <div class="col-sm-6 col-lg-3">
-    <div class="card">
+    <div class="card kpi-card">
       <div class="card-body">
-        <div class="subheader">Status</div>
+        <div class="subheader">Current status</div>
         <div class="h1 mb-0">DRAFT</div>
-        <div class="text-muted mt-2">Waiting for manager submit</div>
+        <div class="text-muted mt-2">
+          {% if is_manager %}
+            Ready for submission to Admin
+          {% else %}
+            Waiting for manager submission
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 
   <div class="col-sm-6 col-lg-3">
-    <div class="card">
+    <div class="card kpi-card">
       <div class="card-body">
         <div class="subheader">Course level</div>
         <div class="h1 mb-0">{% if course.level %}{{ course.level }}{% else %}—{% endif %}</div>
@@ -62,10 +82,12 @@
   </div>
 
   <div class="col-sm-6 col-lg-3">
-    <div class="card">
+    <div class="card kpi-card">
       <div class="card-body">
-        <div class="subheader">Fee (per student)</div>
-        <div class="h1 mb-0">{% if course.fee %}{{ course.fee }} SAR{% else %}—{% endif %}</div>
+        <div class="subheader">Fee per student</div>
+        <div class="h1 mb-0">
+          {% if course.fee %}{{ course.fee }} <span class="fs-4 text-muted">SAR</span>{% else %}—{% endif %}
+        </div>
         <div class="text-muted mt-2">From course settings</div>
       </div>
     </div>
@@ -95,8 +117,12 @@
           <td class="text-muted">{{ s.sa_registration_no }}</td>
           <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
           <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
-          <td><span class="badge bg-azure-lt">{{ s.enrollment_status|default:"—" }}</span></td>
+          <td><span class="badge bg-azure-lt">{{ s.enrollment_status|default:"DRAFT" }}</span></td>
           <td class="text-muted">{{ s.guardian_name }} · {{ s.guardian_phone }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">No students in this draft.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -104,9 +130,17 @@
   </div>
 
   <div class="card-body">
-    <div class="text-muted">
-      Status is <strong>DRAFT</strong>. You may add more students by going back.
-      The <strong>manager</strong> will submit this draft later, then <strong>admin</strong> will approve and issue an invoice.
+    <div class="alert alert-info mb-0">
+      <div class="fw-semibold mb-1">What happens next?</div>
+      <ul class="mb-2">
+        <li><strong>Staff:</strong> You can create drafts only. Track status in <strong>Registration Status</strong>.</li>
+        <li><strong>Manager:</strong> Open <strong>Submission Inbox</strong> and submit drafts to Admin.</li>
+      </ul>
+      Status flow:
+      <strong>DRAFT → SUBMITTED → PENDING_PAYMENT → PAID → ACCEPTED</strong>
+      <div class="text-muted mt-1">
+        Admin will approve and issue invoice to the organization after submission.
+      </div>
     </div>
   </div>
 </div>

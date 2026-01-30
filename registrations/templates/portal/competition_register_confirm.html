@@ -10,34 +10,70 @@
         Event: <strong>{{ event.code }}</strong> — {{ event.name }}
       </div>
     </div>
-    <div class="col-auto ms-auto">
+    <div class="col-auto ms-auto d-flex gap-2">
       <a href="{% url 'portal_competition_register' %}" class="btn btn-outline-primary">Back</a>
+
+      {% if is_manager %}
+        <a href="{% url 'portal_competition_submission_inbox' %}?event_id={{ event.id }}" class="btn btn-primary">
+          Open Submission Inbox
+        </a>
+      {% endif %}
     </div>
   </div>
 </div>
 
+<style>
+  .kpi-card{
+    border-radius:14px;
+    min-height:140px;
+    border:1px solid rgba(0,0,0,.06);
+  }
+  .kpi-card .card-body{ padding:18px; }
+
+  /* Soft logo colors */
+  .kpi-soft-blue   { background: rgba(32,107,196,.10); }
+  .kpi-soft-yellow { background: rgba(245,159,0,.12); }
+  .kpi-soft-green  { background: rgba(47,179,68,.10); }
+
+  .hint-box{
+    border-radius:14px;
+    border:1px solid rgba(0,0,0,.06);
+    background: rgba(32,107,196,.06);
+    padding: 14px 16px;
+  }
+</style>
+
 <div class="row row-cards mb-3">
   <div class="col-md-4">
-    <div class="card">
+    <div class="card kpi-card kpi-soft-green h-100">
       <div class="card-body">
         <div class="subheader">New Draft Registrations</div>
-        <div class="h1 mb-0">{{ created_count }}</div>
+        <div class="h1 mb-0">{{ created_count|default:"0" }}</div>
+        <div class="text-muted mt-2">Created for this event</div>
       </div>
     </div>
   </div>
+
   <div class="col-md-4">
-    <div class="card">
+    <div class="card kpi-card kpi-soft-blue h-100">
       <div class="card-body">
         <div class="subheader">Fee per student</div>
-        <div class="h1 mb-0">{{ fee_per_student }}</div>
+        <div class="h1 mb-0">
+          {{ fee_per_student|default:"0" }} <span class="fs-4 text-muted">SAR</span>
+        </div>
+        <div class="text-muted mt-2">Based on event fee</div>
       </div>
     </div>
   </div>
+
   <div class="col-md-4">
-    <div class="card">
+    <div class="card kpi-card kpi-soft-yellow h-100">
       <div class="card-body">
         <div class="subheader">Total fee</div>
-        <div class="h1 mb-0">{{ total_fee }}</div>
+        <div class="h1 mb-0">
+          {{ total_fee|default:"0" }} <span class="fs-4 text-muted">SAR</span>
+        </div>
+        <div class="text-muted mt-2">For selected students</div>
       </div>
     </div>
   </div>
@@ -47,6 +83,7 @@
   <div class="card-header">
     <h3 class="card-title mb-0">Students in this draft</h3>
   </div>
+
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
       <thead>
@@ -63,14 +100,27 @@
           <td class="fw-semibold">{{ s.first_name_en }} {{ s.last_name_en }}</td>
           <td><span class="badge bg-blue-lt">Level {{ s.current_level }}</span></td>
         </tr>
+        {% empty %}
+        <tr>
+          <td colspan="3" class="text-center text-muted py-4">No students in this draft.</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
-<div class="alert alert-info mt-3">
-  Next step: we will add the “Submit + Payment” flow to move status from
-  <strong>DRAFT → SUBMITTED → PENDING_PAYMENT → PAID → ACCEPTED</strong>.
+<div class="hint-box mt-3">
+  <div class="fw-semibold mb-1">What happens next?</div>
+  <div class="text-muted">
+    <ul class="mb-0">
+      <li><strong>Staff:</strong> drafts remain saved as <strong>DRAFT</strong>.</li>
+      <li><strong>Manager:</strong> open <strong>Submission Inbox</strong> → review → submit to Admin.</li>
+      <li><strong>Admin:</strong> approves and issues invoice → status becomes <strong>PENDING_PAYMENT</strong>.</li>
+    </ul>
+    <div class="mt-2">
+      Status flow: <strong>DRAFT → SUBMITTED → PENDING_PAYMENT → PAID → ACCEPTED</strong>
+    </div>
+  </div>
 </div>
 {% endblock %}
