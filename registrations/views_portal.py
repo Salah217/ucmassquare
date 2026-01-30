@@ -41,19 +41,25 @@ def is_manager(user):
 def portal_dashboard(request):
     org = getattr(request.user, "organization", None)
     today = timezone.now().date()
-# ---- COURSE ENROLLMENT COUNTS (per org) ----
+
+    # ✅ Students KPI
+    total_students = 0
+    if org:
+        total_students = Student.objects.filter(organization=org).count()
+
+    # ---- COURSE ENROLLMENT COUNTS (per org) ----
     course_draft_count = 0
     course_submitted_count = 0
 
     if org:
-     course_draft_count = CourseEnrollment.objects.filter(
-        organization=org, status="DRAFT"
-     ).count()
+        course_draft_count = CourseEnrollment.objects.filter(
+            organization=org, status="DRAFT"
+        ).count()
 
-     course_submitted_count = CourseEnrollment.objects.filter(
-        organization=org, status="SUBMITTED"
-     ).count()
-    
+        course_submitted_count = CourseEnrollment.objects.filter(
+            organization=org, status="SUBMITTED"
+        ).count()
+
     # ---- OPEN COURSES ----
     open_courses = (
         Course.objects
@@ -62,23 +68,17 @@ def portal_dashboard(request):
     )[:6]
 
     # ---- OPEN EVENTS ----
-    # Your Event model DOES NOT have event_date (based on Render error).
-    # So order by deadline (and show upcoming).
     open_events = (
         Event.objects
         .filter(status="OPEN", deadline__gte=today)
         .order_by("deadline", "-created_at")
     )[:6]
 
-    # ---- IMPORTANT NOTICES ----
-    # If you don't have Notice model, keep notices empty to avoid 500.
     notices = []
-    # If you DO have Notice model, uncomment these 2 lines:
-    # from .models import Notice
-    # notices = Notice.objects.filter(is_active=True).order_by("-created_at")[:5]
 
     ctx = {
         "org": org,
+        "total_students": total_students,   # ✅ NOW DEFINED
         "open_courses": open_courses,
         "open_events": open_events,
         "notices": notices,
@@ -86,10 +86,8 @@ def portal_dashboard(request):
         "open_events_count": len(open_events),
         "course_draft_count": course_draft_count,
         "course_submitted_count": course_submitted_count,
-        "total_students": total_students,
     }
     return render(request, "portal/dashboard.html", ctx)
-
 
 # ---------------------------
 # Student list (permanent DB)
