@@ -49,6 +49,14 @@
   }
   .kpi-card .card-body{ padding: 18px; }
   .kpi-badges{ display:flex; gap:.5rem; flex-wrap:wrap; }
+
+  .kpi-underline{
+  width:42px;
+  height:2px;
+  background:#1f2937;
+  border-radius:2px;
+  margin:6px 0 10px 0;
+}
 </style>
 
 <div class="row row-deck row-cards">
@@ -142,31 +150,36 @@
           </div>
         </a>
       </div>
-<div class="card-body">
-  <div class="subheader">Competition Registrations</div>
+      <div class="col-sm-6 col-lg-3">
+  <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
+    <div class="card-body">
 
-  <!-- ✅ inner line like left card -->
-  <div style="width:40px;height:2px;background:#2c3e50;margin:8px 0 12px 0;border-radius:2px;"></div>
+      <!-- title -->
+      <div class="subheader">Competition Registrations</div>
 
-  <div class="mt-2 d-flex flex-wrap gap-2">
-    <span class="badge bg-blue-lt">
-      Draft: {{ comp_draft_count|default:"0" }}
-    </span>
+      <!-- ✅ same underline spacing as course card -->
+      <div class="kpi-underline"></div>
 
-    <span class="badge bg-yellow-lt">
-      Unpaid: {{ comp_unpaid_count|default:"0" }}
-    </span>
+      <!-- badges -->
+      <div class="d-flex flex-wrap gap-2 mt-1">
+        <span class="badge bg-blue-lt">
+          Draft: {{ comp_draft_count|default:"0" }}
+        </span>
 
-    <span class="badge bg-green-lt">
-      Paid: {{ comp_paid_count|default:"0" }}
-    </span>
-  </div>
+        <span class="badge bg-yellow-lt">
+          Unpaid: {{ comp_unpaid_count|default:"0" }}
+        </span>
 
-  <div class="text-muted mt-2">Payments & approvals</div>
+        <span class="badge bg-green-lt">
+          Paid: {{ comp_paid_count|default:"0" }}
+        </span>
+      </div>
+
+      <div class="text-muted mt-2">Payments & approvals</div>
+
+    </div>
+  </a>
 </div>
-
-
-
 
   {# ✅ Recent Students #}
   <div class="col-12 mt-3">
