@@ -1,14 +1,14 @@
 from decimal import Decimal
 from django.db import transaction
-from django.utils import timezone
 from django.db.models import Sum
+from django.utils import timezone
 
 from .models import Invoice, InvoiceItem, InvoiceSequence, CompanyProfile
 
 
 def next_invoice_no(invoice_type: str) -> str:
     """
-    Example:
+    Examples:
       COURSE-2026-000001
       EVENT-2026-000001
     """
@@ -27,7 +27,7 @@ def next_invoice_no(invoice_type: str) -> str:
 def get_active_seller() -> CompanyProfile:
     seller = CompanyProfile.objects.filter(is_active=True).order_by("-id").first()
     if not seller:
-        raise ValueError("No active CompanyProfile found. Create one in admin first.")
+        raise ValueError("No active CompanyProfile found. Create one in admin and mark is_active=True.")
     return seller
 
 
@@ -44,36 +44,44 @@ def recalc_invoice_totals(invoice: Invoice):
 
 
 @transaction.atomic
-def issue_invoice_for_course_enrollments(org, enrollments, issued_by=None, vat_rate=Decimal("0.1500")) -> Invoice:
+def issue_invoice_for_course_enrollments(*, org, course, enrollments, issued_by=None, vat_rate=Decimal("0.1500")) -> Invoice:
+    """
+    Creates ONE COURSE invoice for selected enrollments and links each enrollment.invoice = invoice.
+    """
     seller = get_active_seller()
+
     inv = Invoice.objects.create(
         invoice_no=next_invoice_no("COURSE"),
         invoice_type="COURSE",
         invoice_date=timezone.now().date(),
         seller=seller,
         organization=org,
+
+        # buyer snapshot
         buyer_name=org.name_en,
         buyer_vat_number=getattr(org, "vat_number", "") or "",
         buyer_national_address=getattr(org, "national_address", "") or "",
+
         vat_rate=vat_rate,
         status="ISSUED",
         issued_by=issued_by,
         issued_at=timezone.now(),
     )
 
+    fee = Decimal(str(getattr(course, "fee", 0) or 0))
+
     for e in enrollments:
-        price = Decimal(getattr(e.course, "fee", 0) or 0)
-        item = InvoiceItem.objects.create(
+        InvoiceItem.objects.create(
             invoice=inv,
             student=e.student,
             course_enrollment=e,
-            description=f"Course Enrollment: {e.course.name} (Level {e.course.level})",
+            description=f"Course Enrollment: {course.name} (Level {course.level})",
             qty=1,
-            unit_price=price,
+            unit_price=fee,
         )
-        # InvoiceItem.save calculates line totals automatically
 
-        # Link invoice to enrollment
+    # link enrollments to invoice
+    for e in enrollments:
         e.invoice = inv
         e.save(update_fields=["invoice"])
 
@@ -82,24 +90,31 @@ def issue_invoice_for_course_enrollments(org, enrollments, issued_by=None, vat_r
 
 
 @transaction.atomic
-def issue_invoice_for_event_regs(org, event, regs, issued_by=None, vat_rate=Decimal("0.1500")) -> Invoice:
+def issue_invoice_for_event_regs(*, org, event, regs, issued_by=None, vat_rate=Decimal("0.1500")) -> Invoice:
+    """
+    Creates ONE EVENT invoice for selected registrations and links each reg.invoice = invoice.
+    """
     seller = get_active_seller()
+
     inv = Invoice.objects.create(
         invoice_no=next_invoice_no("EVENT"),
         invoice_type="EVENT",
         invoice_date=timezone.now().date(),
         seller=seller,
         organization=org,
+
+        # buyer snapshot
         buyer_name=org.name_en,
         buyer_vat_number=getattr(org, "vat_number", "") or "",
         buyer_national_address=getattr(org, "national_address", "") or "",
+
         vat_rate=vat_rate,
         status="ISSUED",
         issued_by=issued_by,
         issued_at=timezone.now(),
     )
 
-    fee = Decimal(getattr(event, "fee_per_student", 0) or 0)
+    fee = Decimal(str(getattr(event, "fee_per_student", 0) or 0))
 
     for r in regs:
         InvoiceItem.objects.create(
@@ -110,6 +125,9 @@ def issue_invoice_for_event_regs(org, event, regs, issued_by=None, vat_rate=Deci
             qty=1,
             unit_price=fee,
         )
+
+    # link regs to invoice
+    for r in regs:
         r.invoice = inv
         r.save(update_fields=["invoice"])
 

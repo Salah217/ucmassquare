@@ -3,14 +3,48 @@
 
 {% block content %}
 <div class="page-header d-print-none">
-  <div class="row align-items-center">
+  <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title">Invoices</h2>
+      <h2 class="page-title mb-1">Invoices</h2>
       <div class="text-muted mt-1">Your organization invoices</div>
     </div>
     <div class="col-auto ms-auto">
       <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-primary">Back</a>
     </div>
+  </div>
+</div>
+
+{# Filters #}
+<div class="card mb-3 d-print-none">
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+
+      <div class="col-12 col-md-4">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="">All</option>
+          <option value="DRAFT" {% if status == "DRAFT" %}selected{% endif %}>Draft</option>
+          <option value="ISSUED" {% if status == "ISSUED" %}selected{% endif %}>Issued</option>
+          <option value="PAID" {% if status == "PAID" %}selected{% endif %}>Paid</option>
+          <option value="CANCELLED" {% if status == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-4">
+        <label class="form-label">Type</label>
+        <select name="type" class="form-select">
+          <option value="">All</option>
+          <option value="EVENT" {% if inv_type == "EVENT" %}selected{% endif %}>Competition</option>
+          <option value="COURSE" {% if inv_type == "COURSE" %}selected{% endif %}>Course</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Apply</button>
+        <a class="btn btn-outline-secondary" href="{% url 'portal_invoice_list' %}">Reset</a>
+      </div>
+
+    </form>
   </div>
 </div>
 
@@ -23,18 +57,41 @@
           <th>Type</th>
           <th>Status</th>
           <th>Date</th>
-          <th class="text-end">Total</th>
+          <th class="text-end">Total (SAR)</th>
           <th class="w-1"></th>
         </tr>
       </thead>
+
       <tbody>
         {% for inv in invoices %}
         <tr>
           <td class="fw-semibold">{{ inv.invoice_no }}</td>
-          <td>{{ inv.invoice_type }}</td>
-          <td><span class="badge bg-blue-lt">{{ inv.status }}</span></td>
-          <td class="text-muted">{{ inv.invoice_date }}</td>
-          <td class="text-end">{{ inv.total }}</td>
+
+          <td>
+            {% if inv.invoice_type == "EVENT" %}
+              <span class="badge bg-indigo-lt">Competition</span>
+            {% elif inv.invoice_type == "COURSE" %}
+              <span class="badge bg-azure-lt">Course</span>
+            {% else %}
+              <span class="badge bg-secondary-lt">{{ inv.invoice_type }}</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if inv.status == "PAID" %}
+              <span class="badge bg-green-lt">PAID</span>
+            {% elif inv.status == "ISSUED" %}
+              <span class="badge bg-blue-lt">ISSUED</span>
+            {% elif inv.status == "CANCELLED" %}
+              <span class="badge bg-red-lt">CANCELLED</span>
+            {% else %}
+              <span class="badge bg-yellow-lt">DRAFT</span>
+            {% endif %}
+          </td>
+
+          <td class="text-muted">{{ inv.invoice_date|date:"Y-m-d" }}</td>
+          <td class="text-end fw-semibold">{{ inv.total|floatformat:2 }}</td>
+
           <td class="text-end">
             <a class="btn btn-sm btn-primary" href="{% url 'portal_invoice_detail' inv.id %}">View</a>
           </td>
@@ -47,5 +104,33 @@
       </tbody>
     </table>
   </div>
+
+  {# Pagination (works if invoices is a page_obj) #}
+  {% if invoices.has_other_pages %}
+  <div class="card-footer d-print-none">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="text-muted">
+        Page {{ invoices.number }} of {{ invoices.paginator.num_pages }}
+      </div>
+
+      <div class="btn-list">
+        {% if invoices.has_previous %}
+          <a class="btn btn-outline-primary btn-sm"
+             href="?page={{ invoices.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if inv_type %}&type={{ inv_type }}{% endif %}">
+            Previous
+          </a>
+        {% endif %}
+
+        {% if invoices.has_next %}
+          <a class="btn btn-outline-primary btn-sm"
+             href="?page={{ invoices.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if inv_type %}&type={{ inv_type }}{% endif %}">
+            Next
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

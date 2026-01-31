@@ -11,6 +11,9 @@ from django.views.decorators.http import require_POST
 from django.db.models import Count
 from django.http import HttpResponseForbidden
 from .invoicing import issue_invoice_for_event_regs
+from .models import Invoice
+from .invoicing import issue_invoice_for_course_enrollments  # ✅ add this
+
 
 
 
@@ -36,7 +39,8 @@ def is_manager(user):
 
 # ---------------------------
 # Dashboard
-# ---------------------------@login_required
+# ---------------------------
+@login_required
 def portal_dashboard(request):
     org = getattr(request.user, "organization", None)
     today = timezone.now().date()
@@ -480,7 +484,7 @@ def course_register_confirm(request):
                     enrollment.approved_at = None
                     enrollment.approved_by = None
                     enrollment.rejection_reason = ""
-                    enrollment.invoice_no = ""
+                    enrollment.invoice = None
                     enrollment.paid_at = None
                     enrollment.payment_ref = ""
                     enrollment.save()
@@ -541,7 +545,6 @@ def course_submit(request):
 # COURSE MANAGER SUBMIT (CourseEnrollment workflow)
 # =========================================================
 
-from django.views.decorators.http import require_POST
 
 @login_required
 def course_submit_confirm(request):
@@ -579,6 +582,8 @@ def course_submit_confirm(request):
         "is_manager": True,
     })
     
+
+
 @login_required
 @require_POST
 def course_submit_final(request):
@@ -601,10 +606,13 @@ def course_submit_final(request):
 
     if not selected_ids:
         messages.warning(request, "Please select at least one draft enrollment.")
-        return HttpResponseRedirect(reverse("portal_course_submit_confirm") + f"?course_id={course.id}")
+        return HttpResponseRedirect(
+            reverse("portal_course_submit_confirm") + f"?course_id={course.id}"
+        )
 
     now = timezone.now()
 
+    # only drafts can be submitted
     qs = CourseEnrollment.objects.filter(
         id__in=selected_ids,
         organization=user.organization,
@@ -612,14 +620,51 @@ def course_submit_final(request):
         status="DRAFT",
     )
 
+    inv = None
+
     with transaction.atomic():
+        # ✅ move draft -> pending payment
         updated = qs.update(
-            status="SUBMITTED",
+            status="PENDING_PAYMENT",
             submitted_at=now,
             submitted_by=user,
         )
 
-    messages.success(request, f"Submitted {updated} enrollment(s) to admin.")
+        if updated > 0:
+            # ✅ lock the exact rows we will invoice (avoid double invoice)
+            enrolls_pending = (
+                CourseEnrollment.objects
+                .select_for_update()
+                .filter(
+                    id__in=selected_ids,
+                    organization=user.organization,
+                    course=course,
+                    status="PENDING_PAYMENT",
+                    invoice__isnull=True,
+                )
+                .select_related("student", "course")
+            )
+
+            if enrolls_pending.exists():
+                inv = issue_invoice_for_course_enrollments(
+                    org=user.organization,
+                    course=course,
+                    enrollments=enrolls_pending,
+                    issued_by=None,  # manager-issued
+                )
+
+    if updated == 0:
+        messages.warning(request, "No draft enrollments were submitted (maybe already submitted).")
+        return redirect("portal_course_enrollment_list")
+
+    if inv:
+        messages.success(
+            request,
+            f"Submitted {updated} enrollment(s). Invoice {inv.invoice_no} created. Total: {inv.total} SAR."
+        )
+        return redirect("portal_invoice_detail", invoice_id=inv.id)
+
+    messages.success(request, f"Submitted {updated} enrollment(s).")
     return redirect("portal_course_enrollment_list")
 
 @login_required
@@ -992,11 +1037,7 @@ def competition_submission_inbox(request):
         "filtered_event_id": event_id,
     })
 
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 
-from .models import Invoice
 
 def is_admin(user):
     return getattr(user, "role", "") == "ADMIN" or user.is_superuser
@@ -1021,14 +1062,7 @@ def invoice_detail(request, invoice_id):
         "items": invoice.items.all(),
     })
 
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.db.models import Q
 
-from .models import Invoice
-
-def is_admin(user):
-    return getattr(user, "role", "") == "ADMIN" or user.is_superuser
 
 @login_required
 def invoice_list(request):
@@ -1057,4 +1091,61 @@ def invoice_list(request):
         "invoices": qs[:200],
         "status": status,
         "inv_type": inv_type,
+    })
+
+
+
+@login_required
+def invoice_list(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    qs = (
+        Invoice.objects
+        .filter(organization=user.organization)
+        .select_related("seller", "organization")
+        .order_by("-created_at")
+    )
+
+    status = (request.GET.get("status") or "").strip()
+    inv_type = (request.GET.get("type") or "").strip()
+
+    if status:
+        qs = qs.filter(status=status)
+    if inv_type:
+        qs = qs.filter(invoice_type=inv_type)
+
+    paginator = Paginator(qs, 50)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    return render(request, "portal/invoice_list.html", {
+        "invoices": page_obj,
+        "page_obj": page_obj,
+        "status": status,
+        "inv_type": inv_type,
+    })
+
+
+@login_required
+def invoice_detail(request, invoice_id):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    invoice = get_object_or_404(
+        Invoice.objects
+        .select_related("seller", "organization")
+        .prefetch_related("items__student"),
+        pk=invoice_id,
+        organization=user.organization
+    )
+
+    return render(request, "portal/invoice_detail.html", {
+        "invoice": invoice,
+        "items": invoice.items.all(),
     })

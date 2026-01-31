@@ -3,69 +3,132 @@
 
 {% block content %}
 <div class="page-header d-print-none">
-  <div class="row align-items-center">
+  <div class="row align-items-center g-2">
     <div class="col">
-      <h2 class="page-title">Invoice {{ invoice.invoice_no }}</h2>
+      <h2 class="page-title mb-1">Invoice {{ invoice.invoice_no }}</h2>
       <div class="text-muted mt-1">
-        Status: <strong>{{ invoice.status }}</strong> · Date: {{ invoice.invoice_date }}
+        Date: {{ invoice.invoice_date|date:"Y-m-d" }}
+        ·
+        {% if invoice.status == "PAID" %}
+          <span class="badge bg-green-lt">PAID</span>
+        {% elif invoice.status == "ISSUED" %}
+          <span class="badge bg-blue-lt">ISSUED</span>
+        {% elif invoice.status == "CANCELLED" %}
+          <span class="badge bg-red-lt">CANCELLED</span>
+        {% else %}
+          <span class="badge bg-yellow-lt">DRAFT</span>
+        {% endif %}
       </div>
     </div>
-    <div class="col-auto ms-auto">
-      <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-primary">Back</a>
+
+    <div class="col-auto ms-auto d-print-none d-flex gap-2">
+      <button onclick="window.print()" class="btn btn-outline-secondary">Print</button>
+      <a href="{% url 'portal_invoice_list' %}" class="btn btn-outline-primary">Back</a>
     </div>
   </div>
 </div>
 
-<div class="card mb-3">
-  <div class="card-body">
-    <div class="fw-semibold mb-2">Buyer</div>
-    <div>{{ invoice.buyer_name }}</div>
-    {% if invoice.buyer_vat_number %}
-      <div class="text-muted">VAT: {{ invoice.buyer_vat_number }}</div>
-    {% endif %}
-    {% if invoice.buyer_national_address %}
-      <div class="text-muted">{{ invoice.buyer_national_address }}</div>
-    {% endif %}
+<div class="row g-3">
+
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Seller</div>
+
+        <div class="fw-semibold">{{ invoice.seller.legal_name }}</div>
+        <div class="text-muted">VAT: {{ invoice.seller.vat_number }}</div>
+
+        {% if invoice.seller.cr_number %}
+          <div class="text-muted">CR: {{ invoice.seller.cr_number }}</div>
+        {% endif %}
+
+        {% if invoice.seller.address_line %}
+          <div class="text-muted mt-2">{{ invoice.seller.address_line }}</div>
+        {% endif %}
+        {% if invoice.seller.city or invoice.seller.postal_code %}
+          <div class="text-muted">{{ invoice.seller.city }}{% if invoice.seller.postal_code %}, {{ invoice.seller.postal_code }}{% endif %}</div>
+        {% endif %}
+        {% if invoice.seller.phone %}
+          <div class="text-muted">Phone: {{ invoice.seller.phone }}</div>
+        {% endif %}
+        {% if invoice.seller.email %}
+          <div class="text-muted">Email: {{ invoice.seller.email }}</div>
+        {% endif %}
+      </div>
+    </div>
   </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card">
+      <div class="card-body">
+        <div class="fw-semibold mb-2">Buyer</div>
+
+        <div class="fw-semibold">{{ invoice.buyer_name }}</div>
+
+        {% if invoice.buyer_vat_number %}
+          <div class="text-muted">VAT: {{ invoice.buyer_vat_number }}</div>
+        {% endif %}
+
+        {% if invoice.buyer_national_address %}
+          <div class="text-muted mt-2">{{ invoice.buyer_national_address|linebreaksbr }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<div class="card">
+<div class="card mt-3">
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
       <thead>
         <tr>
           <th>Student</th>
           <th>Description</th>
-          <th class="text-end">Price</th>
+          <th class="text-end">Qty</th>
+          <th class="text-end">Unit</th>
+          <th class="text-end">Subtotal</th>
           <th class="text-end">VAT</th>
           <th class="text-end">Total</th>
         </tr>
       </thead>
+
       <tbody>
         {% for it in items %}
         <tr>
-          <td class="fw-semibold">{{ it.student.sa_registration_no }}</td>
+          <td class="fw-semibold">
+            {{ it.student.sa_registration_no }}<br>
+            <span class="text-muted">{{ it.student.first_name_en }} {{ it.student.last_name_en }}</span>
+          </td>
           <td>{{ it.description }}</td>
-          <td class="text-end">{{ it.line_subtotal }}</td>
-          <td class="text-end">{{ it.line_vat }}</td>
-          <td class="text-end">{{ it.line_total }}</td>
+          <td class="text-end">{{ it.qty }}</td>
+          <td class="text-end">{{ it.unit_price|floatformat:2 }}</td>
+          <td class="text-end">{{ it.line_subtotal|floatformat:2 }}</td>
+          <td class="text-end">{{ it.line_vat|floatformat:2 }}</td>
+          <td class="text-end fw-semibold">{{ it.line_total|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted py-4">No items.</td>
         </tr>
         {% endfor %}
       </tbody>
+
       <tfoot>
         <tr>
-          <td colspan="4" class="text-end fw-semibold">Subtotal</td>
-          <td class="text-end fw-semibold">{{ invoice.subtotal }}</td>
+          <td colspan="6" class="text-end fw-semibold">Subtotal</td>
+          <td class="text-end fw-semibold">{{ invoice.subtotal|floatformat:2 }}</td>
         </tr>
         <tr>
-          <td colspan="4" class="text-end fw-semibold">VAT</td>
-          <td class="text-end fw-semibold">{{ invoice.vat_amount }}</td>
+          <td colspan="6" class="text-end fw-semibold">VAT</td>
+          <td class="text-end fw-semibold">{{ invoice.vat_amount|floatformat:2 }}</td>
         </tr>
         <tr>
-          <td colspan="4" class="text-end fw-bold">Grand Total</td>
-          <td class="text-end fw-bold">{{ invoice.total }}</td>
+          <td colspan="6" class="text-end fw-bold">Grand Total (SAR)</td>
+          <td class="text-end fw-bold">{{ invoice.total|floatformat:2 }}</td>
         </tr>
       </tfoot>
+
     </table>
   </div>
 </div>

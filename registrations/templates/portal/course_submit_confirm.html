@@ -29,7 +29,7 @@
       <div class="card-body">
         <div class="subheader">Draft enrollments</div>
         <div class="h1 mb-0">{{ selected_count }}</div>
-        <div class="text-muted mt-2">Total drafts available for this course</div>
+        <div class="text-muted mt-2">Drafts available for this course</div>
       </div>
     </div>
   </div>
@@ -132,11 +132,12 @@
 
     <div class="card-footer d-flex justify-content-between align-items-center">
       <div class="text-muted">
-        Submitting will change status from <strong>DRAFT</strong> → <strong>SUBMITTED</strong> for selected enrollments.
+        Submitting will change status from <strong>DRAFT</strong> → <strong>PENDING_PAYMENT</strong>
+        and create an invoice.
       </div>
 
       <button type="submit" class="btn btn-danger" id="btn-submit">
-        Submit Selected to Admin
+        Submit Selected & Create Invoice
       </button>
     </div>
   </div>
@@ -154,17 +155,29 @@
     return document.querySelectorAll(".row-check:checked").length;
   }
 
+  function money2(x) {
+    // Always show 2 decimals (SAR)
+    return (Math.round((x + Number.EPSILON) * 100) / 100).toFixed(2);
+  }
+
   function updateTotals() {
     const fee = parseFloat(feeInput?.value || "0") || 0;
     const selected = getSelectedCount();
     const total = selected * fee;
 
     countEl.textContent = selected.toString();
-    totalEl.textContent = total.toString();
+    totalEl.textContent = money2(total);
 
     const hasAny = selected > 0;
     btnSubmit.disabled = !hasAny;
     hintNone.style.display = hasAny ? "none" : "inline";
+
+    // keep "Select all" checkbox in sync
+    const rows = document.querySelectorAll(".row-check");
+    if (rows.length) {
+      checkAll.checked = selected === rows.length;
+      checkAll.indeterminate = selected > 0 && selected < rows.length;
+    }
   }
 
   if (checkAll) {
@@ -178,7 +191,6 @@
     cb.addEventListener("change", updateTotals);
   });
 
-  // Initial state
   updateTotals();
 </script>
 {% endblock %}

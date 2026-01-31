@@ -214,7 +214,7 @@ class CourseEnrollment(models.Model):
 
     rejection_reason = models.CharField(max_length=255, blank=True)
 
-    invoice = models.ForeignKey("Invoice", null=True, blank=True, on_delete=models.SET_NULL)
+    invoice = models.ForeignKey("Invoice", null=True, blank=True, on_delete=models.SET_NULL, related_name="course_enrollments")
     paid_at = models.DateTimeField(null=True, blank=True)
     payment_ref = models.CharField(max_length=100, blank=True)
 
