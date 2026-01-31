@@ -991,3 +991,32 @@ def competition_submission_inbox(request):
         "is_manager": True,
         "filtered_event_id": event_id,
     })
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+
+from .models import Invoice
+
+def is_admin(user):
+    return getattr(user, "role", "") == "ADMIN" or user.is_superuser
+
+@login_required
+def invoice_detail(request, invoice_id):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    invoice = get_object_or_404(
+        Invoice.objects.select_related("seller", "organization").prefetch_related("items__student"),
+        pk=invoice_id,
+        organization=user.organization
+    )
+
+    return render(request, "portal/invoice_detail.html", {
+        "invoice": invoice,
+        "items": invoice.items.all(),
+    })

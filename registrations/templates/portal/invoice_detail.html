@@ -1,0 +1,72 @@
+{% extends "portal/layout.html" %}
+{% block title %}Invoice {{ invoice.invoice_no }} | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Invoice {{ invoice.invoice_no }}</h2>
+      <div class="text-muted mt-1">
+        Status: <strong>{{ invoice.status }}</strong> · Date: {{ invoice.invoice_date }}
+      </div>
+    </div>
+    <div class="col-auto ms-auto">
+      <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-primary">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="fw-semibold mb-2">Buyer</div>
+    <div>{{ invoice.buyer_name }}</div>
+    {% if invoice.buyer_vat_number %}
+      <div class="text-muted">VAT: {{ invoice.buyer_vat_number }}</div>
+    {% endif %}
+    {% if invoice.buyer_national_address %}
+      <div class="text-muted">{{ invoice.buyer_national_address }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Description</th>
+          <th class="text-end">Price</th>
+          <th class="text-end">VAT</th>
+          <th class="text-end">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td class="fw-semibold">{{ it.student.sa_registration_no }}</td>
+          <td>{{ it.description }}</td>
+          <td class="text-end">{{ it.line_subtotal }}</td>
+          <td class="text-end">{{ it.line_vat }}</td>
+          <td class="text-end">{{ it.line_total }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" class="text-end fw-semibold">Subtotal</td>
+          <td class="text-end fw-semibold">{{ invoice.subtotal }}</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="text-end fw-semibold">VAT</td>
+          <td class="text-end fw-semibold">{{ invoice.vat_amount }}</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="text-end fw-bold">Grand Total</td>
+          <td class="text-end fw-bold">{{ invoice.total }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}
