@@ -54,4 +54,8 @@ urlpatterns = [
     path("competitions/submit/final/", v.competition_submit_final, name="portal_competition_submit_final"),
     path("competitions/submission-inbox/", v.competition_submission_inbox, name="portal_competition_submission_inbox"),
 
+
+    path("invoices/<int:invoice_id>/", v.invoice_detail, name="portal_invoice_detail"),
+    path("invoices/", v.invoice_list, name="portal_invoice_list"),
+
 ]

@@ -1,8 +1,12 @@
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils import timezone
+from .models import CompanyProfile, Invoice, InvoiceItem, InvoiceSequence
 
-from import_export.admin import ImportExportModelAdmin
+try:
+    from import_export.admin import ImportExportModelAdmin
+except ImportError:
+    ImportExportModelAdmin = admin.ModelAdmin
 
 from .models import (
     Organization, User,
@@ -11,8 +15,15 @@ from .models import (
     EventRegistration,
 )
 
+# ✅ Make resources optional too
+try:
+    from .resources import StudentResource
+except Exception:
+    StudentResource = None
+
+
 # If you already have StudentResource in resources.py keep it
-from .resources import StudentResource  # make sure it no longer references event/status
+#from .resources import StudentResource  # make sure it no longer references event/status
 
 
 admin.site.site_header = "UCMAS Admin"
@@ -86,7 +97,8 @@ class UserAdmin(BaseUserAdmin):
 # =========================================================
 @admin.register(Student)
 class StudentAdmin(ImportExportModelAdmin):
-    resource_class = StudentResource
+    #if StudentResource:
+     #   resource_class = StudentResource
 
     list_display = (
         "sa_registration_no",
@@ -233,3 +245,30 @@ class EventRegistrationAdmin(admin.ModelAdmin):
         self.message_user(request, f"Marked {updated} registration(s) as PAID.", level=messages.SUCCESS)
 
     mark_as_paid.short_description = "Mark selected PENDING_PAYMENT as PAID"
+
+
+@admin.register(CompanyProfile)
+class CompanyProfileAdmin(admin.ModelAdmin):
+    list_display = ("legal_name", "vat_number", "city", "is_active")
+    list_filter = ("is_active", "city")
+    search_fields = ("legal_name", "vat_number", "cr_number")
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ("invoice_no", "invoice_type", "organization", "status", "total", "invoice_date", "issued_at")
+    list_filter = ("invoice_type", "status", "invoice_date")
+    search_fields = ("invoice_no", "organization__name_en", "buyer_name")
+    date_hierarchy = "invoice_date"
+
+
+@admin.register(InvoiceItem)
+class InvoiceItemAdmin(admin.ModelAdmin):
+    list_display = ("invoice", "student", "description", "qty", "unit_price", "line_total")
+    search_fields = ("invoice__invoice_no", "student__sa_registration_no", "description")
+
+
+@admin.register(InvoiceSequence)
+class InvoiceSequenceAdmin(admin.ModelAdmin):
+    list_display = ("invoice_type", "year", "last_number")
+    list_filter = ("invoice_type", "year")

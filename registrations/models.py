@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from decimal import Decimal
+from django.db.models import Sum
 
 
 class Organization(models.Model):
@@ -32,6 +34,19 @@ class Organization(models.Model):
 
     status = models.CharField(max_length=20, choices=STATUS, default="PENDING")
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # ✅ Buyer invoicing details (Saudi)
+    vat_number = models.CharField(max_length=20, blank=True)  # optional
+    national_address = models.TextField(blank=True)  # short national address format
+    address_line = models.CharField(max_length=255, blank=True)
+    district = models.CharField(max_length=100, blank=True)
+    postal_code = models.CharField(max_length=10, blank=True)
+    building_no = models.CharField(max_length=10, blank=True)
+    additional_no = models.CharField(max_length=10, blank=True)
+
+    # Optional extra buyer identifiers (if needed)
+    cr_number = models.CharField(max_length=50, blank=True)  # some orgs want it on invoice
+
 
     def __str__(self):
         return self.name_en
@@ -199,7 +214,7 @@ class CourseEnrollment(models.Model):
 
     rejection_reason = models.CharField(max_length=255, blank=True)
 
-    invoice_no = models.CharField(max_length=50, blank=True)
+    invoice = models.ForeignKey("Invoice", null=True, blank=True, on_delete=models.SET_NULL)
     paid_at = models.DateTimeField(null=True, blank=True)
     payment_ref = models.CharField(max_length=100, blank=True)
 
@@ -230,6 +245,7 @@ class EventRegistration(models.Model):
 
     # fee snapshot at the time of submission
     fee_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    invoice = models.ForeignKey("Invoice", null=True, blank=True, on_delete=models.SET_NULL)
 
     rejection_reason = models.CharField(max_length=255, blank=True)
 
@@ -260,3 +276,123 @@ class EventRegistration(models.Model):
 
     def __str__(self):
         return f"{self.event.code} - {self.student.sa_registration_no} ({self.status})"
+
+
+class CompanyProfile(models.Model):
+    legal_name = models.CharField(max_length=200)
+    vat_number = models.CharField(max_length=20, blank=True)
+    cr_number = models.CharField(max_length=50, blank=True)
+
+    national_address = models.TextField(blank=True)
+    address_line = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    postal_code = models.CharField(max_length=10, blank=True)
+
+    phone = models.CharField(max_length=30, blank=True)
+    email = models.EmailField(blank=True)
+    logo = models.ImageField(upload_to="logos/", null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.legal_name
+
+
+class InvoiceSequence(models.Model):
+    invoice_type = models.CharField(max_length=10, choices=[("COURSE", "Course"), ("EVENT", "Event")])
+    year = models.PositiveIntegerField()
+    last_number = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["invoice_type", "year"], name="uniq_invoice_type_year")
+        ]
+
+    def __str__(self):
+        return f"{self.invoice_type}-{self.year}: {self.last_number}"
+
+
+class Invoice(models.Model):
+    TYPE = [("COURSE", "Course Invoice"), ("EVENT", "Event/Competition Invoice")]
+    STATUS = [("DRAFT", "Draft"), ("ISSUED", "Issued"), ("PAID", "Paid"), ("CANCELLED", "Cancelled")]
+
+    invoice_no = models.CharField(max_length=50, unique=True)
+    invoice_type = models.CharField(max_length=10, choices=TYPE)
+
+    invoice_date = models.DateField(default=timezone.now)
+    due_date = models.DateField(null=True, blank=True)
+
+    seller = models.ForeignKey(CompanyProfile, on_delete=models.PROTECT)
+    organization = models.ForeignKey(Organization, on_delete=models.PROTECT)
+
+    # Buyer snapshot
+    buyer_name = models.CharField(max_length=200)
+    buyer_vat_number = models.CharField(max_length=20, blank=True)
+    buyer_national_address = models.TextField(blank=True)
+
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=4, default=Decimal("0.1500"))
+
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    vat_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+
+    status = models.CharField(max_length=20, choices=STATUS, default="DRAFT")
+
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="issued_invoices"
+    )
+    issued_at = models.DateTimeField(null=True, blank=True)
+
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_ref = models.CharField(max_length=100, blank=True)
+
+    pdf_file = models.FileField(upload_to="invoices/", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.invoice_no
+
+    def recalc_totals(self):
+        agg = self.items.aggregate(
+            subtotal=Sum("line_subtotal"),
+            vat=Sum("line_vat"),
+            total=Sum("line_total"),
+        )
+        self.subtotal = agg["subtotal"] or Decimal("0.00")
+        self.vat_amount = agg["vat"] or Decimal("0.00")
+        self.total = agg["total"] or Decimal("0.00")
+        self.save(update_fields=["subtotal", "vat_amount", "total"])
+
+
+class InvoiceItem(models.Model):
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="items")
+
+    student = models.ForeignKey("Student", on_delete=models.PROTECT)
+
+    course_enrollment = models.ForeignKey("CourseEnrollment", null=True, blank=True, on_delete=models.PROTECT)
+    event_registration = models.ForeignKey("EventRegistration", null=True, blank=True, on_delete=models.PROTECT)
+
+    description = models.CharField(max_length=255)
+
+    qty = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2)
+
+    line_subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    line_vat = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    line_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+
+    def clean(self):
+        if self.invoice.invoice_type == "COURSE":
+            if not self.course_enrollment_id or self.event_registration_id:
+                raise ValidationError("Course invoice item must link to course_enrollment only.")
+        if self.invoice.invoice_type == "EVENT":
+            if not self.event_registration_id or self.course_enrollment_id:
+                raise ValidationError("Event invoice item must link to event_registration only.")
+
+    def save(self, *args, **kwargs):
+        vat_rate = Decimal(self.invoice.vat_rate or 0)
+        self.line_subtotal = (Decimal(self.qty) * self.unit_price).quantize(Decimal("0.01"))
+        self.line_vat = (self.line_subtotal * vat_rate).quantize(Decimal("0.01"))
+        self.line_total = (self.line_subtotal + self.line_vat).quantize(Decimal("0.01"))
+        super().save(*args, **kwargs)

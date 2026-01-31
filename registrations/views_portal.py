@@ -10,6 +10,7 @@ from django.http import HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from django.db.models import Count
 from django.http import HttpResponseForbidden
+from .invoicing import issue_invoice_for_event_regs
 
 
 
@@ -858,7 +859,6 @@ def competition_submit_confirm(request):
         "just_submitted": submitted is not None,
     })
 
-
 @login_required
 def competition_submit_final(request):
     user = request.user
@@ -890,6 +890,7 @@ def competition_submit_final(request):
     now = timezone.now()
     fee_per_student = event.fee_per_student or 0
 
+    # only drafts can be submitted
     qs = EventRegistration.objects.filter(
         id__in=selected_ids,
         organization=user.organization,
@@ -905,11 +906,47 @@ def competition_submit_final(request):
             submitted_by=user,
         )
 
+        # ✅ create invoice for the now-pending regs that have no invoice yet
+        regs_pending = (
+            EventRegistration.objects
+            .filter(
+                id__in=selected_ids,
+                organization=user.organization,
+                event=event,
+                status="PENDING_PAYMENT",
+                invoice__isnull=True,
+            )
+            .select_related("student")
+        )
+
+        inv = None
+        if regs_pending.exists():
+            inv = issue_invoice_for_event_regs(
+                org=user.organization,
+                event=event,
+                regs=regs_pending,
+                issued_by=None,  # optional: keep empty for manager-issued
+            )
+
+    # message + redirect
+    if updated == 0:
+        messages.warning(request, "No draft registrations were submitted (maybe already submitted).")
+        return redirect("portal_dashboard")
+
+    if inv:
+        messages.success(
+            request,
+            f"Submitted {updated} registration(s). Invoice {inv.invoice_no} created. Total: {inv.total} SAR."
+        )
+        return redirect("portal_invoice_detail", invoice_id=inv.id)
+
+    # fallback (shouldn't happen unless all had invoices already)
     messages.success(
         request,
         f"Submitted {updated} registration(s). Total due: {fee_per_student * updated:.2f} SAR."
     )
     return redirect("portal_dashboard")
+
 
 @login_required
 def competition_submission_inbox(request):
