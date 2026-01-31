@@ -1,0 +1,51 @@
+{% extends "portal/layout.html" %}
+{% block title %}Invoices | UCMAS{% endblock %}
+
+{% block content %}
+<div class="page-header d-print-none">
+  <div class="row align-items-center">
+    <div class="col">
+      <h2 class="page-title">Invoices</h2>
+      <div class="text-muted mt-1">Your organization invoices</div>
+    </div>
+    <div class="col-auto ms-auto">
+      <a href="{% url 'portal_dashboard' %}" class="btn btn-outline-primary">Back</a>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Invoice #</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th class="text-end">Total</th>
+          <th class="w-1"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in invoices %}
+        <tr>
+          <td class="fw-semibold">{{ inv.invoice_no }}</td>
+          <td>{{ inv.invoice_type }}</td>
+          <td><span class="badge bg-blue-lt">{{ inv.status }}</span></td>
+          <td class="text-muted">{{ inv.invoice_date }}</td>
+          <td class="text-end">{{ inv.total }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-primary" href="{% url 'portal_invoice_detail' inv.id %}">View</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">No invoices yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

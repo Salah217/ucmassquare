@@ -1020,3 +1020,41 @@ def invoice_detail(request, invoice_id):
         "invoice": invoice,
         "items": invoice.items.all(),
     })
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+
+from .models import Invoice
+
+def is_admin(user):
+    return getattr(user, "role", "") == "ADMIN" or user.is_superuser
+
+@login_required
+def invoice_list(request):
+    user = request.user
+    if is_admin(user):
+        return redirect("/admin/")
+    if not user.organization_id:
+        return render(request, "portal/no_organization.html")
+
+    qs = (
+        Invoice.objects
+        .filter(organization=user.organization)
+        .select_related("seller", "organization")
+        .order_by("-created_at")
+    )
+
+    # optional filter: ?status=PAID or ?type=EVENT
+    status = request.GET.get("status")
+    inv_type = request.GET.get("type")
+    if status:
+        qs = qs.filter(status=status)
+    if inv_type:
+        qs = qs.filter(invoice_type=inv_type)
+
+    return render(request, "portal/invoice_list.html", {
+        "invoices": qs[:200],
+        "status": status,
+        "inv_type": inv_type,
+    })
