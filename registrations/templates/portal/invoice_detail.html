@@ -21,12 +21,14 @@
       </div>
     </div>
 
-    <div class="col-auto ms-auto d-print-none d-flex gap-2">
-      <button onclick="window.print()" class="btn btn-outline-secondary">Print</button>
-      <a href="{% url 'portal_invoice_list' %}" class="btn btn-outline-primary">Back</a>
-    </div>
-  </div>
+   <div class="col-auto ms-auto d-print-none d-flex gap-2">
+  <a href="{% url 'portal_invoice_pdf' invoice.id %}" class="btn btn-primary">
+    Download PDF
+  </a>
+  <button onclick="window.print()" class="btn btn-outline-secondary">Print</button>
+  <a href="{% url 'portal_invoice_list' %}" class="btn btn-outline-primary">Back</a>
 </div>
+
 
 <div class="row g-3">
 

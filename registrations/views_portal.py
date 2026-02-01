@@ -1149,3 +1149,63 @@ def invoice_detail(request, invoice_id):
         "invoice": invoice,
         "items": invoice.items.all(),
     })
+
+
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render
+from django.core.files.base import ContentFile
+
+from .models import Invoice
+from .pdf import build_invoice_pdf  # the ReportLab function
+
+
+
+def is_admin(user):
+    return user.is_superuser or getattr(user, "role", "") == "ADMIN"
+
+
+@login_required
+def invoice_pdf(request, invoice_id):
+    user = request.user
+
+    # ✅ Admin: can download any invoice
+    if is_admin(user):
+        invoice = get_object_or_404(
+            Invoice.objects.select_related("seller", "organization").prefetch_related("items__student"),
+            pk=invoice_id,
+        )
+    else:
+        # ✅ Org users: only their invoices
+        if not user.organization_id:
+            return render(request, "portal/no_organization.html")
+
+        invoice = get_object_or_404(
+            Invoice.objects.select_related("seller", "organization").prefetch_related("items__student"),
+            pk=invoice_id,
+            organization=user.organization,
+        )
+
+    filename = f"{invoice.invoice_no}.pdf"
+
+    # ✅ If already stored, stream it
+    if invoice.pdf_file and invoice.pdf_file.name:
+        invoice.pdf_file.open("rb")
+        resp = FileResponse(invoice.pdf_file, content_type="application/pdf")
+        resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return resp
+
+    # ✅ Generate fresh PDF
+    items = invoice.items.all()
+    pdf_bytes = build_invoice_pdf(invoice, items)
+
+    # ✅ Optional: store (works only if you have persistent media storage)
+    try:
+        invoice.pdf_file.save(filename, ContentFile(pdf_bytes), save=True)
+    except Exception:
+        # Render without persistent disk / media storage: ignore (download still works)
+        pass
+
+    resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp

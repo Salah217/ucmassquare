@@ -57,5 +57,6 @@ urlpatterns = [
 
     path("invoices/<int:invoice_id>/", v.invoice_detail, name="portal_invoice_detail"),
     path("invoices/", v.invoice_list, name="portal_invoice_list"),
+    path("invoices/<int:invoice_id>/pdf/", v.invoice_pdf, name="portal_invoice_pdf"),
 
 ]
