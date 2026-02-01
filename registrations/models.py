@@ -364,10 +364,11 @@ class Invoice(models.Model):
         self.total = agg["total"] or Decimal("0.00")
         self.save(update_fields=["subtotal", "vat_amount", "total"])
 
+from decimal import Decimal
+from django.core.exceptions import ValidationError
 
 class InvoiceItem(models.Model):
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="items")
-
     student = models.ForeignKey("Student", on_delete=models.PROTECT)
 
     course_enrollment = models.ForeignKey("CourseEnrollment", null=True, blank=True, on_delete=models.PROTECT)
@@ -386,13 +387,16 @@ class InvoiceItem(models.Model):
         if self.invoice.invoice_type == "COURSE":
             if not self.course_enrollment_id or self.event_registration_id:
                 raise ValidationError("Course invoice item must link to course_enrollment only.")
-        if self.invoice.invoice_type == "EVENT":
+        elif self.invoice.invoice_type == "EVENT":
             if not self.event_registration_id or self.course_enrollment_id:
                 raise ValidationError("Event invoice item must link to event_registration only.")
 
     def save(self, *args, **kwargs):
+        self.full_clean()  # ✅ enforce clean()
         vat_rate = Decimal(self.invoice.vat_rate or 0)
+
         self.line_subtotal = (Decimal(self.qty) * self.unit_price).quantize(Decimal("0.01"))
         self.line_vat = (self.line_subtotal * vat_rate).quantize(Decimal("0.01"))
         self.line_total = (self.line_subtotal + self.line_vat).quantize(Decimal("0.01"))
+
         super().save(*args, **kwargs)
