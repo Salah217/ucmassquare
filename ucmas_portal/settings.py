@@ -1,11 +1,10 @@
 from pathlib import Path
 import os
 import dj_database_url
-import os
-os.makedirs(MEDIA_ROOT, exist_ok=True)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 # -------------------------
 # Media (uploads / PDFs)
 # -------------------------
@@ -16,8 +15,8 @@ MEDIA_ROOT = os.getenv("MEDIA_ROOT", str(BASE_DIR / "media"))
 try:
     os.makedirs(MEDIA_ROOT, exist_ok=True)
 except Exception:
-    # If filesystem is read-only or disk not mounted, app still runs.
     pass
+
 # -------------------------
 # Core security / env
 # -------------------------
