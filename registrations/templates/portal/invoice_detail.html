@@ -22,9 +22,11 @@
     </div>
 
    <div class="col-auto ms-auto d-print-none d-flex gap-2">
+  {% if user.is_superuser or user.role == "ADMIN" %}
   <a href="{% url 'portal_invoice_pdf' invoice.id %}" class="btn btn-primary">
     Download PDF
   </a>
+{% endif %}
   <button onclick="window.print()" class="btn btn-outline-secondary">Print</button>
   <a href="{% url 'portal_invoice_list' %}" class="btn btn-outline-primary">Back</a>
 </div>
