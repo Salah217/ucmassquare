@@ -606,13 +606,10 @@ def course_submit_final(request):
 
     if not selected_ids:
         messages.warning(request, "Please select at least one draft enrollment.")
-        return HttpResponseRedirect(
-            reverse("portal_course_submit_confirm") + f"?course_id={course.id}"
-        )
+        return HttpResponseRedirect(reverse("portal_course_submit_confirm") + f"?course_id={course.id}")
 
     now = timezone.now()
 
-    # only drafts can be submitted
     qs = CourseEnrollment.objects.filter(
         id__in=selected_ids,
         organization=user.organization,
@@ -620,52 +617,19 @@ def course_submit_final(request):
         status="DRAFT",
     )
 
-    inv = None
-
-    with transaction.atomic():
-        # ✅ move draft -> pending payment
-        updated = qs.update(
-            status="PENDING_PAYMENT",
-            submitted_at=now,
-            submitted_by=user,
-        )
-
-        if updated > 0:
-            # ✅ lock the exact rows we will invoice (avoid double invoice)
-            enrolls_pending = (
-                CourseEnrollment.objects
-                .select_for_update()
-                .filter(
-                    id__in=selected_ids,
-                    organization=user.organization,
-                    course=course,
-                    status="PENDING_PAYMENT",
-                    invoice__isnull=True,
-                )
-                .select_related("student", "course")
-            )
-
-            if enrolls_pending.exists():
-                inv = issue_invoice_for_course_enrollments(
-                    org=user.organization,
-                    course=course,
-                    enrollments=enrolls_pending,
-                    issued_by=None,  # manager-issued
-                )
+    updated = qs.update(
+        status="SUBMITTED",
+        submitted_at=now,
+        submitted_by=user,
+    )
 
     if updated == 0:
         messages.warning(request, "No draft enrollments were submitted (maybe already submitted).")
         return redirect("portal_course_enrollment_list")
 
-    if inv:
-        messages.success(
-            request,
-            f"Submitted {updated} enrollment(s). Invoice {inv.invoice_no} created. Total: {inv.total} SAR."
-        )
-        return redirect("portal_invoice_detail", invoice_id=inv.id)
-
-    messages.success(request, f"Submitted {updated} enrollment(s).")
+    messages.success(request, f"Submitted {updated} enrollment(s) to admin for review.")
     return redirect("portal_course_enrollment_list")
+
 
 @login_required
 def course_enrollment_list(request):
@@ -904,6 +868,13 @@ def competition_submit_confirm(request):
         "just_submitted": submitted is not None,
     })
 
+from django.db import transaction
+from django.utils import timezone
+from django.shortcuts import get_object_or_404, redirect
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+from django.contrib import messages
+
 @login_required
 def competition_submit_final(request):
     user = request.user
@@ -935,7 +906,7 @@ def competition_submit_final(request):
     now = timezone.now()
     fee_per_student = event.fee_per_student or 0
 
-    # only drafts can be submitted
+    # ✅ manager can submit ONLY drafts
     qs = EventRegistration.objects.filter(
         id__in=selected_ids,
         organization=user.organization,
@@ -945,53 +916,21 @@ def competition_submit_final(request):
 
     with transaction.atomic():
         updated = qs.update(
-            status="PENDING_PAYMENT",
-            fee_amount=fee_per_student,
+            status="SUBMITTED",                 # ✅ correct flow
+            fee_amount=fee_per_student,         # ✅ snapshot (recommended)
             submitted_at=now,
             submitted_by=user,
         )
 
-        # ✅ create invoice for the now-pending regs that have no invoice yet
-        regs_pending = (
-            EventRegistration.objects
-            .filter(
-                id__in=selected_ids,
-                organization=user.organization,
-                event=event,
-                status="PENDING_PAYMENT",
-                invoice__isnull=True,
-            )
-            .select_related("student")
-        )
-
-        inv = None
-        if regs_pending.exists():
-            inv = issue_invoice_for_event_regs(
-                org=user.organization,
-                event=event,
-                regs=regs_pending,
-                issued_by=None,  # optional: keep empty for manager-issued
-            )
-
-    # message + redirect
     if updated == 0:
         messages.warning(request, "No draft registrations were submitted (maybe already submitted).")
         return redirect("portal_dashboard")
 
-    if inv:
-        messages.success(
-            request,
-            f"Submitted {updated} registration(s). Invoice {inv.invoice_no} created. Total: {inv.total} SAR."
-        )
-        return redirect("portal_invoice_detail", invoice_id=inv.id)
-
-    # fallback (shouldn't happen unless all had invoices already)
     messages.success(
         request,
-        f"Submitted {updated} registration(s). Total due: {fee_per_student * updated:.2f} SAR."
+        f"Submitted {updated} registration(s) to admin for review."
     )
     return redirect("portal_dashboard")
-
 
 @login_required
 def competition_submission_inbox(request):

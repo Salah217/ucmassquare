@@ -29,7 +29,7 @@
       <div class="card-body">
         <div class="subheader">Draft enrollments</div>
         <div class="h1 mb-0">{{ selected_count }}</div>
-        <div class="text-muted mt-2">Drafts available for this course</div>
+        <div class="text-muted mt-2">Applications available for this course</div>
       </div>
     </div>
   </div>
@@ -66,7 +66,7 @@
 
   <div class="card">
     <div class="card-header">
-      <h3 class="card-title mb-0">Draft students</h3>
+      <h3 class="card-title mb-0">Applied students</h3>
 
       <div class="card-actions d-flex align-items-center gap-3">
         <span class="text-muted small" id="hint-none" style="display:none;">
@@ -123,24 +123,24 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="6" class="text-center text-muted py-4">No draft enrollments found.</td>
+            <td colspan="6" class="text-center text-muted py-4">No application enrollments found.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
 
-    <div class="card-footer d-flex justify-content-between align-items-center">
-      <div class="text-muted">
-        Submitting will change status from <strong>DRAFT</strong> → <strong>PENDING_PAYMENT</strong>
-        and create an invoice.
-      </div>
-
-      <button type="submit" class="btn btn-danger" id="btn-submit">
-        Submit Selected & Create Invoice
-      </button>
-    </div>
+   <div class="card-footer d-flex justify-content-between align-items-center">
+  <div class="text-muted">
+    Submitting will change status from <strong>DRAFT</strong> → <strong>SUBMITTED</strong>.
+    Admin will review the applications, then set status to <strong>PENDING_PAYMENT</strong> and issue the invoice.
   </div>
+
+  <button type="submit" class="btn btn-danger" id="btn-submit">
+    Submit Selected to <strong>UCMAS KSA</strong>
+  </button>
+</div>
+
 </form>
 
 <script>

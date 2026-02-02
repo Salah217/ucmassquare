@@ -227,57 +227,6 @@ class CourseEnrollment(models.Model):
         return f"{self.student} -> {self.course} ({self.status})"
 
 
-class EventRegistration(models.Model):
-    STATUS = [
-        ("DRAFT", "Draft"),
-        ("SUBMITTED", "Submitted"),
-        ("PENDING_PAYMENT", "Pending Payment"),
-        ("PAID", "Paid"),
-        ("ACCEPTED", "Accepted"),
-        ("REJECTED", "Rejected"),
-    ]
-
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="event_registrations")
-    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="registrations")
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="event_registrations")
-
-    status = models.CharField(max_length=20, choices=STATUS, default="DRAFT")
-
-    # fee snapshot at the time of submission
-    fee_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    invoice = models.ForeignKey("Invoice", null=True, blank=True, on_delete=models.SET_NULL)
-
-    rejection_reason = models.CharField(max_length=255, blank=True)
-
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    submitted_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True, blank=True,
-        on_delete=models.SET_NULL,
-        related_name="submitted_event_registrations",
-    )
-
-    # payment tracking (Tabby later)
-    paid_at = models.DateTimeField(null=True, blank=True)
-    payment_ref = models.CharField(max_length=100, blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["event", "student"], name="uniq_event_student")
-        ]
-
-    def clean(self):
-        super().clean()
-        # Ensure student belongs to same org
-        if self.student_id and self.organization_id and self.student.organization_id != self.organization_id:
-            raise ValidationError(_("Student must belong to the same organization."))
-
-    def __str__(self):
-        return f"{self.event.code} - {self.student.sa_registration_no} ({self.status})"
-
-
 class CompanyProfile(models.Model):
     legal_name = models.CharField(max_length=200)
     vat_number = models.CharField(max_length=20, blank=True)
@@ -400,3 +349,57 @@ class InvoiceItem(models.Model):
         self.line_total = (self.line_subtotal + self.line_vat).quantize(Decimal("0.01"))
 
         super().save(*args, **kwargs)
+class EventRegistration(models.Model):
+    STATUS = [
+        ("DRAFT", "Draft"),
+        ("SUBMITTED", "Submitted"),
+        ("PENDING_PAYMENT", "Pending Payment"),
+        ("PAID", "Paid"),
+        ("ACCEPTED", "Accepted"),
+        ("REJECTED", "Rejected"),
+    ]
+
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="event_registrations")
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="registrations")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="event_registrations")
+
+    status = models.CharField(max_length=20, choices=STATUS, default="DRAFT")
+
+    fee_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    invoice = models.ForeignKey("Invoice", null=True, blank=True, on_delete=models.SET_NULL, related_name="event_registrations")
+
+    rejection_reason = models.CharField(max_length=255, blank=True)
+
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="submitted_event_registrations",
+    )
+
+    approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_event_registrations",
+    )
+
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_ref = models.CharField(max_length=100, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["event", "student"], name="uniq_event_student")
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.student_id and self.organization_id and self.student.organization_id != self.organization_id:
+            raise ValidationError(_("Student must belong to the same organization."))
+
+    def __str__(self):
+        return f"{self.event.code} - {self.student.sa_registration_no} ({self.status})"
