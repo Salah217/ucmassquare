@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.urls import reverse
+
 from django.http import HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from django.db.models import Count
@@ -13,6 +13,20 @@ from django.http import HttpResponseForbidden
 from .invoicing import issue_invoice_for_event_regs
 from .models import Invoice
 from .invoicing import issue_invoice_for_course_enrollments  # ✅ add this
+
+from django.utils import timezone
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
+from django.contrib import messages
+
+from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
+from django.http import HttpResponse
+from django.http.response import FileResponse
+
+
+
 
 
 
@@ -868,12 +882,6 @@ def competition_submit_confirm(request):
         "just_submitted": submitted is not None,
     })
 
-from django.db import transaction
-from django.utils import timezone
-from django.shortcuts import get_object_or_404, redirect
-from django.http import HttpResponseRedirect
-from django.urls import reverse
-from django.contrib import messages
 
 @login_required
 def competition_submit_final(request):
@@ -1003,58 +1011,38 @@ def invoice_detail(request, invoice_id):
 
 
 
-@login_required
-def invoice_list(request):
-    user = request.user
-    if is_admin(user):
-        return redirect("/admin/")
-    if not user.organization_id:
-        return render(request, "portal/no_organization.html")
-
-    qs = (
-        Invoice.objects
-        .filter(organization=user.organization)
-        .select_related("seller", "organization")
-        .order_by("-created_at")
-    )
-
-    # optional filter: ?status=PAID or ?type=EVENT
-    status = request.GET.get("status")
-    inv_type = request.GET.get("type")
-    if status:
-        qs = qs.filter(status=status)
-    if inv_type:
-        qs = qs.filter(invoice_type=inv_type)
-
-    return render(request, "portal/invoice_list.html", {
-        "invoices": qs[:200],
-        "status": status,
-        "inv_type": inv_type,
-    })
-
-
 
 @login_required
 def invoice_list(request):
     user = request.user
+
+    # Admin uses Django admin
     if is_admin(user):
         return redirect("/admin/")
+
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
 
+    # ✅ Manager inbox: only issued/paid invoices
     qs = (
         Invoice.objects
-        .filter(organization=user.organization)
+        .filter(
+            organization=user.organization,
+            status__in=["ISSUED", "PAID"],
+        )
         .select_related("seller", "organization")
         .order_by("-created_at")
     )
 
-    status = (request.GET.get("status") or "").strip()
-    inv_type = (request.GET.get("type") or "").strip()
+    # Optional filters (still safe)
+    status = (request.GET.get("status") or "").strip().upper()
+    inv_type = (request.GET.get("type") or "").strip().upper()
 
-    if status:
+    # Only allow manager to filter within allowed statuses
+    if status in ["ISSUED", "PAID"]:
         qs = qs.filter(status=status)
-    if inv_type:
+
+    if inv_type in ["COURSE", "EVENT"]:
         qs = qs.filter(invoice_type=inv_type)
 
     paginator = Paginator(qs, 50)
@@ -1071,8 +1059,11 @@ def invoice_list(request):
 @login_required
 def invoice_detail(request, invoice_id):
     user = request.user
+
+    # Admin should use Django admin
     if is_admin(user):
         return redirect("/admin/")
+
     if not user.organization_id:
         return render(request, "portal/no_organization.html")
 
@@ -1081,7 +1072,8 @@ def invoice_detail(request, invoice_id):
         .select_related("seller", "organization")
         .prefetch_related("items__student"),
         pk=invoice_id,
-        organization=user.organization
+        organization=user.organization,
+        status__in=["ISSUED", "PAID"],  # ✅ important: manager cannot view drafts
     )
 
     return render(request, "portal/invoice_detail.html", {
@@ -1089,48 +1081,40 @@ def invoice_detail(request, invoice_id):
         "items": invoice.items.all(),
     })
 
-
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
-from django.core.files.base import ContentFile
-
-from .models import Invoice
-from .pdf import build_invoice_pdf  # the ReportLab function
-
-
-
 def is_admin(user):
     return user.is_superuser or getattr(user, "role", "") == "ADMIN"
+
 
 
 @login_required
 def invoice_pdf(request, invoice_id):
     user = request.user
 
-    # ✅ Admin: can download any invoice
+    # ✅ Admin: can download ANY invoice (even DRAFT)
     if is_admin(user):
         invoice = get_object_or_404(
             Invoice.objects.select_related("seller", "organization").prefetch_related("items__student"),
             pk=invoice_id,
         )
+
     else:
-        # ✅ Org users: only their invoices
+        # ✅ Org users: must have organization
         if not user.organization_id:
             return render(request, "portal/no_organization.html")
 
+        # ✅ Org users: can download ONLY ISSUED or PAID invoices
         invoice = get_object_or_404(
             Invoice.objects.select_related("seller", "organization").prefetch_related("items__student"),
             pk=invoice_id,
             organization=user.organization,
+            status__in=["ISSUED", "PAID"],
         )
 
     filename = f"{invoice.invoice_no}.pdf"
 
     # ✅ If already stored, stream it
     if invoice.pdf_file and invoice.pdf_file.name:
-        invoice.pdf_file.open("rb")
-        resp = FileResponse(invoice.pdf_file, content_type="application/pdf")
+        resp = FileResponse(invoice.pdf_file.open("rb"), content_type="application/pdf")
         resp["Content-Disposition"] = f'attachment; filename="{filename}"'
         return resp
 
@@ -1142,7 +1126,7 @@ def invoice_pdf(request, invoice_id):
     try:
         invoice.pdf_file.save(filename, ContentFile(pdf_bytes), save=True)
     except Exception:
-        # Render without persistent disk / media storage: ignore (download still works)
+        # No persistent disk / external media storage → still downloads fine
         pass
 
     resp = HttpResponse(pdf_bytes, content_type="application/pdf")

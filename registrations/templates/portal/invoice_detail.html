@@ -21,16 +21,18 @@
       </div>
     </div>
 
-   <div class="col-auto ms-auto d-print-none d-flex gap-2">
-  {% if user.is_superuser or user.role == "ADMIN" %}
-  <a href="{% url 'portal_invoice_pdf' invoice.id %}" class="btn btn-primary">
-    Download PDF
-  </a>
-{% endif %}
-  <button onclick="window.print()" class="btn btn-outline-secondary">Print</button>
-  <a href="{% url 'portal_invoice_list' %}" class="btn btn-outline-primary">Back</a>
-</div>
+    <div class="col-auto ms-auto d-print-none d-flex gap-2">
+      {% if user.is_superuser or user.role == "ADMIN" %}
+        <a href="{% url 'portal_invoice_pdf' invoice.id %}" class="btn btn-primary">
+          Download PDF
+        </a>
+      {% endif %}
 
+      <button onclick="window.print()" class="btn btn-outline-secondary">Print</button>
+      <a href="{% url 'portal_invoice_list' %}" class="btn btn-outline-primary">Back</a>
+    </div>
+  </div>
+</div>
 
 <div class="row g-3">
 
@@ -50,7 +52,9 @@
           <div class="text-muted mt-2">{{ invoice.seller.address_line }}</div>
         {% endif %}
         {% if invoice.seller.city or invoice.seller.postal_code %}
-          <div class="text-muted">{{ invoice.seller.city }}{% if invoice.seller.postal_code %}, {{ invoice.seller.postal_code }}{% endif %}</div>
+          <div class="text-muted">
+            {{ invoice.seller.city }}{% if invoice.seller.postal_code %}, {{ invoice.seller.postal_code }}{% endif %}
+          </div>
         {% endif %}
         {% if invoice.seller.phone %}
           <div class="text-muted">Phone: {{ invoice.seller.phone }}</div>

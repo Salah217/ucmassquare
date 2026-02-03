@@ -304,3 +304,96 @@ class InvoiceItemAdmin(admin.ModelAdmin):
 class InvoiceSequenceAdmin(admin.ModelAdmin):
     list_display = ("invoice_type", "year", "last_number")
     list_filter = ("invoice_type", "year")
+
+from django.utils.html import format_html
+from django.urls import reverse
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ("invoice_no", "invoice_type", "organization", "status", "total", "invoice_date", "pdf_download")
+    list_filter = ("invoice_type", "status", "organization", "invoice_date")
+    search_fields = ("invoice_no", "organization__name_en", "buyer_name")
+
+    def pdf_download(self, obj):
+        url = reverse("portal_invoice_pdf", kwargs={"invoice_id": obj.id})
+        return format_html('<a class="button" href="{}">PDF</a>', url)
+
+    pdf_download.short_description = "PDF"
+
+from django.contrib import admin, messages
+from django.urls import path, reverse
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse, FileResponse
+from django.utils.html import format_html
+from django.core.files.base import ContentFile
+
+from .models import Invoice
+from .pdf import build_invoice_pdf
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = (
+        "invoice_no", "invoice_type", "organization", "status",
+        "total", "invoice_date", "issued_at", "paid_at", "download_pdf_link"
+    )
+    list_filter = ("invoice_type", "status", "organization", "invoice_date")
+    search_fields = ("invoice_no", "organization__name_en", "buyer_name")
+    date_hierarchy = "invoice_date"
+    actions = ["mark_paid"]
+
+    # ✅ Button in invoice list
+    def download_pdf_link(self, obj):
+        url = reverse("admin:registrations_invoice_download_pdf", args=[obj.pk])
+        return format_html('<a class="button" href="{}">Download PDF</a>', url)
+    download_pdf_link.short_description = "PDF"
+
+    # ✅ Button also inside invoice change form (top right)
+    change_form_template = "admin/registrations/invoice/change_form.html"
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "<int:invoice_id>/download-pdf/",
+                self.admin_site.admin_view(self.download_pdf_view),
+                name="registrations_invoice_download_pdf",
+            ),
+        ]
+        return custom_urls + urls
+
+    def download_pdf_view(self, request, invoice_id):
+        invoice = get_object_or_404(
+            Invoice.objects.select_related("seller", "organization").prefetch_related("items__student"),
+            pk=invoice_id,
+        )
+        filename = f"{invoice.invoice_no}.pdf"
+
+        # ✅ If stored already, serve it
+        if invoice.pdf_file and invoice.pdf_file.name:
+            invoice.pdf_file.open("rb")
+            resp = FileResponse(invoice.pdf_file, content_type="application/pdf")
+            resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return resp
+
+        # ✅ Generate fresh PDF
+        items = invoice.items.all()
+        pdf_bytes = build_invoice_pdf(invoice, items)
+
+        # ✅ Optional: store it (if MEDIA storage is working)
+        try:
+            invoice.pdf_file.save(filename, ContentFile(pdf_bytes), save=True)
+        except Exception:
+            pass
+
+        resp = HttpResponse(pdf_bytes, content_type="application/pdf")
+        resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return resp
+
+    @admin.action(description="Mark selected invoices as PAID")
+    def mark_paid(self, request, queryset):
+        if not (request.user.is_superuser or getattr(request.user, "role", "") == "ADMIN"):
+            self.message_user(request, "Admins only.", level=messages.ERROR)
+            return
+        updated = queryset.filter(status="ISSUED").update(status="PAID")
+        self.message_user(request, f"Marked {updated} invoice(s) as PAID.", level=messages.SUCCESS)
