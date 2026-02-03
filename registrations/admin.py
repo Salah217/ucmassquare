@@ -3,6 +3,12 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils import timezone
 from django.db import transaction
 
+from django.urls import path, reverse
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse, FileResponse
+from django.utils.html import format_html
+from django.core.files.base import ContentFile
+
 try:
     from import_export.admin import ImportExportModelAdmin
 except ImportError:
@@ -20,6 +26,9 @@ from .invoicing import (
     issue_invoice_for_course_enrollments,
     issue_invoice_for_event_regs
 )
+
+from .pdf import build_invoice_pdf
+
 
 # ---------------------------
 # Admin labels
@@ -135,7 +144,7 @@ class CourseAdmin(admin.ModelAdmin):
 @admin.register(CourseEnrollment)
 class CourseEnrollmentAdmin(admin.ModelAdmin):
     list_display = ("organization", "student", "course", "status", "created_at", "invoice", "created_by")
-    list_filter  = ("organization", "status", "course")
+    list_filter = ("organization", "status", "course")
     search_fields = (
         "student__sa_registration_no",
         "student__first_name_en",
@@ -169,9 +178,17 @@ class CourseEnrollmentAdmin(admin.ModelAdmin):
 
     @admin.action(description="Issue COURSE invoice (PENDING_PAYMENT only)")
     def issue_course_invoice(self, request, queryset):
-        qs = queryset.filter(status="PENDING_PAYMENT", invoice__isnull=True).select_related("course", "student", "organization")
+        qs = (
+            queryset
+            .filter(status="PENDING_PAYMENT", invoice__isnull=True)
+            .select_related("course", "student", "organization")
+        )
         if not qs.exists():
-            self.message_user(request, "Nothing to invoice. Select PENDING_PAYMENT rows with empty invoice.", level=messages.WARNING)
+            self.message_user(
+                request,
+                "Nothing to invoice. Select PENDING_PAYMENT rows with empty invoice.",
+                level=messages.WARNING
+            )
             return
 
         grouped = {}
@@ -204,7 +221,7 @@ class CourseEnrollmentAdmin(admin.ModelAdmin):
 @admin.register(EventRegistration)
 class EventRegistrationAdmin(admin.ModelAdmin):
     list_display = ("event", "student", "organization", "status", "fee_amount", "created_at", "invoice", "paid_at")
-    list_filter  = ("status", "event", "organization")
+    list_filter = ("status", "event", "organization")
     search_fields = (
         "student__sa_registration_no",
         "student__first_name_en",
@@ -229,14 +246,27 @@ class EventRegistrationAdmin(admin.ModelAdmin):
 
     @admin.action(description="Approve: SUBMITTED → PENDING_PAYMENT")
     def mark_pending_payment(self, request, queryset):
-        updated = queryset.filter(status="SUBMITTED").update(status="PENDING_PAYMENT")
+        now = timezone.now()
+        updated = queryset.filter(status="SUBMITTED").update(
+            status="PENDING_PAYMENT",
+            approved_at=now,
+            approved_by=request.user,
+        )
         self.message_user(request, f"Moved {updated} registration(s) to PENDING_PAYMENT.", level=messages.SUCCESS)
 
     @admin.action(description="Issue EVENT invoice (PENDING_PAYMENT only)")
     def issue_event_invoice(self, request, queryset):
-        qs = queryset.filter(status="PENDING_PAYMENT", invoice__isnull=True).select_related("event", "student", "organization")
+        qs = (
+            queryset
+            .filter(status="PENDING_PAYMENT", invoice__isnull=True)
+            .select_related("event", "student", "organization")
+        )
         if not qs.exists():
-            self.message_user(request, "Nothing to invoice. Select PENDING_PAYMENT rows with empty invoice.", level=messages.WARNING)
+            self.message_user(
+                request,
+                "Nothing to invoice. Select PENDING_PAYMENT rows with empty invoice.",
+                level=messages.WARNING
+            )
             return
 
         grouped = {}
@@ -270,65 +300,13 @@ class EventRegistrationAdmin(admin.ModelAdmin):
 
 
 # =========================================================
-# CompanyProfile / Invoice
+# CompanyProfile / Invoice / Items / Sequence
 # =========================================================
 @admin.register(CompanyProfile)
 class CompanyProfileAdmin(admin.ModelAdmin):
     list_display = ("legal_name", "vat_number", "city", "is_active")
     list_filter = ("is_active", "city")
     search_fields = ("legal_name", "vat_number", "cr_number")
-
-
-@admin.register(Invoice)
-class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ("invoice_no", "invoice_type", "organization", "status", "total", "invoice_date", "issued_at", "paid_at")
-    list_filter = ("invoice_type", "status", "organization", "invoice_date")
-    search_fields = ("invoice_no", "organization__name_en", "buyer_name")
-    date_hierarchy = "invoice_date"
-    actions = ["mark_paid"]
-
-    @admin.action(description="Mark selected invoices as PAID")
-    def mark_paid(self, request, queryset):
-        now = timezone.now()
-        updated = queryset.filter(status="ISSUED").update(status="PAID", paid_at=now)
-        self.message_user(request, f"Marked {updated} invoice(s) as PAID.", level=messages.SUCCESS)
-
-
-@admin.register(InvoiceItem)
-class InvoiceItemAdmin(admin.ModelAdmin):
-    list_display = ("invoice", "student", "description", "qty", "unit_price", "line_total")
-    search_fields = ("invoice__invoice_no", "student__sa_registration_no", "description")
-
-
-@admin.register(InvoiceSequence)
-class InvoiceSequenceAdmin(admin.ModelAdmin):
-    list_display = ("invoice_type", "year", "last_number")
-    list_filter = ("invoice_type", "year")
-
-from django.utils.html import format_html
-from django.urls import reverse
-
-@admin.register(Invoice)
-class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ("invoice_no", "invoice_type", "organization", "status", "total", "invoice_date", "pdf_download")
-    list_filter = ("invoice_type", "status", "organization", "invoice_date")
-    search_fields = ("invoice_no", "organization__name_en", "buyer_name")
-
-    def pdf_download(self, obj):
-        url = reverse("portal_invoice_pdf", kwargs={"invoice_id": obj.id})
-        return format_html('<a class="button" href="{}">PDF</a>', url)
-
-    pdf_download.short_description = "PDF"
-
-from django.contrib import admin, messages
-from django.urls import path, reverse
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponse, FileResponse
-from django.utils.html import format_html
-from django.core.files.base import ContentFile
-
-from .models import Invoice
-from .pdf import build_invoice_pdf
 
 
 @admin.register(Invoice)
@@ -392,8 +370,21 @@ class InvoiceAdmin(admin.ModelAdmin):
 
     @admin.action(description="Mark selected invoices as PAID")
     def mark_paid(self, request, queryset):
-        if not (request.user.is_superuser or getattr(request.user, "role", "") == "ADMIN"):
+        if not is_admin_user(request.user):
             self.message_user(request, "Admins only.", level=messages.ERROR)
             return
-        updated = queryset.filter(status="ISSUED").update(status="PAID")
+        now = timezone.now()
+        updated = queryset.filter(status="ISSUED").update(status="PAID", paid_at=now)
         self.message_user(request, f"Marked {updated} invoice(s) as PAID.", level=messages.SUCCESS)
+
+
+@admin.register(InvoiceItem)
+class InvoiceItemAdmin(admin.ModelAdmin):
+    list_display = ("invoice", "student", "description", "qty", "unit_price", "line_total")
+    search_fields = ("invoice__invoice_no", "student__sa_registration_no", "description")
+
+
+@admin.register(InvoiceSequence)
+class InvoiceSequenceAdmin(admin.ModelAdmin):
+    list_display = ("invoice_type", "year", "last_number")
+    list_filter = ("invoice_type", "year")
