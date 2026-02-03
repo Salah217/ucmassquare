@@ -1,4 +1,5 @@
 {% extends "portal/layout.html" %}
+{% load static %}
 {% block title %}Dashboard | UCMAS{% endblock %}
 
 {% block content %}
@@ -45,61 +46,98 @@
     border-radius: 14px;
     min-height: 150px;
     border: 1px solid rgba(0,0,0,.06);
-    background: #fff;               /* ✅ no background color */
+    background: #fff;
   }
   .kpi-card .card-body{ padding: 18px; }
   .kpi-badges{ display:flex; gap:.5rem; flex-wrap:wrap; }
 
   .kpi-underline{
-  width:42px;
-  height:2px;
-  background:#1f2937;
-  border-radius:2px;
-  margin:6px 0 0 0;
-}
-.kpi-gap{
-  height:16px;        /* ✅ this is the missing spacing */
-}
+    width:42px;
+    height:2px;
+    background:#1f2937;
+    border-radius:2px;
+    margin:6px 0 0 0;
+  }
+  .kpi-gap{ height:16px; }
+
+  /* ✅ Dashboard right image */
+  .dash-brand-card{
+    border-radius: 14px;
+    min-height: 160px;           /* match module height */
+    border: 1px solid rgba(0,0,0,.06);
+    background: #fff;
+    overflow: hidden;
+  }
+  .dash-brand-card .card-body{
+    padding: 14px;
+    height: 160px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .dash-brand-img{
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;         /* keep logo proportions */
+    display:block;
+  }
 </style>
 
 <div class="row row-deck row-cards">
 
-  {# (1) MODULES (TOP ROW) #}
+  {# (1) MODULES (TOP ROW) + IMAGE RIGHT #}
   <div class="col-12">
     <div class="row g-3">
 
-      <div class="col-12 col-md-4">
-        <a href="{% url 'portal_student_add' %}" class="card module-card module-green text-decoration-none">
-          <div class="card-body">
-            <span class="module-pill">MODULE</span>
-            <h3 class="mt-3 mb-1">Register New Student</h3>
-            <div class="text-muted">Add a student to your school database.</div>
+      {# LEFT: 3 modules take 8 columns #}
+      <div class="col-12 col-lg-8">
+        <div class="row g-3">
+
+          <div class="col-12 col-md-4">
+            <a href="{% url 'portal_student_add' %}" class="card module-card module-green text-decoration-none">
+              <div class="card-body">
+                <span class="module-pill">MODULE</span>
+                <h3 class="mt-3 mb-1">Register New Student</h3>
+                <div class="text-muted">Add a student to your school database.</div>
+              </div>
+            </a>
           </div>
-        </a>
+
+          <div class="col-12 col-md-4">
+            <a href="{% url 'portal_course_register' %}" class="card module-card module-yellow text-decoration-none">
+              <div class="card-body">
+                <span class="module-pill">MODULE</span>
+                <h3 class="mt-3 mb-1">Apply for a Course</h3>
+                <div class="text-muted">Select a course then enroll eligible students.</div>
+              </div>
+            </a>
+          </div>
+
+          <div class="col-12 col-md-4">
+            <a href="{% url 'portal_competition_register' %}" class="card module-card module-blue text-decoration-none">
+              <div class="card-body">
+                <span class="module-pill">MODULE</span>
+                <h3 class="mt-3 mb-1">Register in a Competition</h3>
+                <div class="text-muted">Select students and add them to a competition.</div>
+              </div>
+            </a>
+          </div>
+
+        </div>
       </div>
 
-      <div class="col-12 col-md-4">
-        <a href="{% url 'portal_course_register' %}" class="card module-card module-yellow text-decoration-none">
+      {# RIGHT: image/logo card takes 4 columns #}
+      <div class="col-12 col-lg-4">
+        <div class="card dash-brand-card">
           <div class="card-body">
-            <span class="module-pill">MODULE</span>
-            <h3 class="mt-3 mb-1">Apply for a Course</h3>
-            <div class="text-muted">Select a course then enroll eligible students.</div>
+            <img
+              src="{% static 'brand/ucmas_dashboard.png' %}"
+              alt="UCMAS"
+              class="dash-brand-img"
+            >
           </div>
-        </a>
+        </div>
       </div>
-
-      <div class="col-12 col-md-4">
-        <a href="{% url 'portal_competition_register' %}" class="card module-card module-blue text-decoration-none">
-          <div class="card-body">
-            <span class="module-pill">MODULE</span>
-            <h3 class="mt-3 mb-1">Register in a Competition</h3>
-            <div class="text-muted">Select students and add them to a competition.</div>
-          </div>
-        </a>
-      </div>
-<img src="{% static 'brand/dashboard_banner.png' %}"
-     class="img-fluid"
-     style="max-height:260px; object-fit:contain;">
 
     </div>
   </div>
@@ -112,7 +150,7 @@
         <a href="{% url 'portal_student_list' %}" class="card text-decoration-none h-100 kpi-card">
           <div class="card-body">
             <div class="subheader">Total Students</div>
-             <div class="h1 mb-0">{{ total_students }}</div>
+            <div class="h1 mb-0">{{ total_students }}</div>
             <div class="text-muted mt-2">Students in your school database</div>
           </div>
         </a>
@@ -159,23 +197,23 @@
 
       <div class="col-sm-6 col-lg-3">
         <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
-      <div class="card-body">
-  <div class="subheader">Competition Registrations</div>
+          <div class="card-body">
+            <div class="subheader">Competition Registrations</div>
+            <div class="h1 mb-2">—</div>
 
-  <!-- ✅ same dash line as course card -->
-  <div class="h1 mb-2">—</div>
+            <div class="kpi-badges">
+              <span class="badge bg-blue-lt">Draft: {{ comp_draft_count|default:"0" }}</span>
+              <span class="badge bg-yellow-lt">Unpaid: {{ comp_unpaid_count|default:"0" }}</span>
+              <span class="badge bg-green-lt">Paid: {{ comp_paid_count|default:"0" }}</span>
+            </div>
 
-  <div class="kpi-badges">
-    <span class="badge bg-blue-lt">Draft: {{ comp_draft_count|default:"0" }}</span>
-    <span class="badge bg-yellow-lt">Unpaid: {{ comp_unpaid_count|default:"0" }}</span>
-    <span class="badge bg-green-lt">Paid: {{ comp_paid_count|default:"0" }}</span>
+            <div class="text-muted mt-2">Payments & approvals</div>
+          </div>
+        </a>
+      </div>
+
+    </div>
   </div>
-
-  <div class="text-muted mt-2">Payments & approvals</div>
-</div>
-
-  </a>
-</div>
 
   {# ✅ Recent Students #}
   <div class="col-12 mt-3">

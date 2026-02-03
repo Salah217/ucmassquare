@@ -8,6 +8,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 )
+from reportlab.lib.utils import ImageReader
+
+from django.contrib.staticfiles import finders
 
 
 def _money(x):
@@ -17,22 +20,33 @@ def _money(x):
         return "0.00"
 
 
+def _get_logo_path():
+    """
+    Resolve logo path from Django staticfiles.
+    Put your logo at: static/brand/ucmas_logo.png
+    Works locally + Render (after collectstatic).
+    """
+    return finders.find("brand/ucmas_logo.png")
+
+
 def build_invoice_pdf(invoice, items):
     """
     Returns PDF bytes for an invoice using ReportLab Platypus.
     - Nice table (borders, header background)
     - Text wrapping for description/address
     - Header/footer per page
+    - Includes logo in header (top-left)
     """
 
     buf = BytesIO()
 
+    # Increase top margin to make space for logo + header
     doc = SimpleDocTemplate(
         buf,
         pagesize=A4,
         leftMargin=16 * mm,
         rightMargin=16 * mm,
-        topMargin=16 * mm,
+        topMargin=34 * mm,     # ✅ was 16mm (too tight for logo)
         bottomMargin=14 * mm,
         title=f"Invoice {invoice.invoice_no}",
     )
@@ -64,13 +78,42 @@ def build_invoice_pdf(invoice, items):
         spaceAfter=2,
     )
 
+    logo_path = _get_logo_path()
+
     # ---- Header/footer on each page ----
     def on_page(c, d):
         c.saveState()
         w, h = A4
+
+        # ✅ Logo (top-left)
+        if logo_path:
+            try:
+                img = ImageReader(logo_path)
+                # position relative to page, not margins
+                x = 16 * mm
+                y = h - 24 * mm  # top area
+                c.drawImage(
+                    img,
+                    x,
+                    y,
+                    width=20 * mm,
+                    height=20 * mm,
+                    preserveAspectRatio=True,
+                    mask="auto",
+                )
+            except Exception:
+                pass
+
+        # ✅ Small header line (top-right)
+        c.setFont("Helvetica", 9)
+        c.setFillColor(colors.black)
+        c.drawRightString(w - 16 * mm, h - 14 * mm, "UCMAS KSA")
+
+        # ✅ Footer page number
         c.setFont("Helvetica", 8)
         c.setFillColor(colors.grey)
         c.drawRightString(w - 16 * mm, 10 * mm, f"Page {c.getPageNumber()}")
+
         c.restoreState()
 
     story = []
@@ -107,7 +150,6 @@ def build_invoice_pdf(invoice, items):
     if invoice.buyer_vat_number:
         buyer_lines.append(f"VAT: {invoice.buyer_vat_number}")
     if invoice.buyer_national_address:
-        # Convert newlines to <br/>
         buyer_lines.append(invoice.buyer_national_address.replace("\n", "<br/>"))
 
     seller_block = Paragraph("<br/>".join(seller_lines), small)
