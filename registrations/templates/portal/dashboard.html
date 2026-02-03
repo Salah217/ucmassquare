@@ -48,6 +48,12 @@
       pointer-events: auto;
     }
   }
+/* ✅ OPTION A: reserve space on desktop so banner never overlaps cards */
+@media (min-width: 992px){
+  .row-deck.row-cards{
+    padding-right: 380px;
+  }
+}
 
   /* MODULES = FULL COLOR, SAME HEIGHT */
   .module-card{
@@ -95,6 +101,36 @@
   }
   /* badges keep left alignment for readability */
   .kpi-badges{ display:flex; gap:.5rem; flex-wrap:wrap; }
+/* badges in ONE line always */
+.kpi-badges{
+  display: flex;
+  gap: .5rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.kpi-badges .badge{
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* Reserve space on desktop so banner never overlaps cards */
+@media (min-width: 992px){
+  .row-deck.row-cards{
+    padding-right: 380px;
+  }
+}
+
+/* KPI consistent equal-height */
+.kpi-card .card-body{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.kpi-card .text-muted.mt-2{
+  margin-top: auto !important;
+}
 
 </style>
 
