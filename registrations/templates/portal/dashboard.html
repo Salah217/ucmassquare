@@ -174,78 +174,75 @@
     </div>
   </div>
 
-  {# (2) KPIs (SECOND ROW) #}
   <div class="col-12 mt-3">
-    <div class="row g-3">
+  <div class="row g-3 kpi-row">
 
-      <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_student_list' %}" class="card text-decoration-none h-100 kpi-card">
-          <div class="card-body">
-            <div class="subheader">Total Students</div>
-            <div class="h1 mb-0">{{ total_students }}</div>
-            <div class="text-muted mt-2">Students in your school database</div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
-          <div class="card-body">
-            <div class="subheader">Open Competitions</div>
-            <div class="h1 mb-0">{{ open_events|length }}</div>
-            <div class="text-muted mt-2">Available competitions</div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col-sm-6 col-lg-3">
-        <a
-          href="{% if is_manager %}{% url 'portal_course_submission_inbox' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
-          class="card text-decoration-none h-100 kpi-card"
-        >
-          <div class="card-body">
-            <div class="subheader">
-              {% if is_manager %}Submission Inbox{% else %}Registration Status{% endif %}
-            </div>
-
-            <div class="h1 mb-2">{{ course_total|default:"—" }}</div>
-
-            <div class="kpi-badges">
-              <span class="badge bg-blue-lt">Draft: {{ course_draft_count|default:"0" }}</span>
-              <span class="badge bg-yellow-lt">Submitted: {{ course_submitted_count|default:"0" }}</span>
-              <span class="badge bg-green-lt">Accepted: {{ course_accepted_count|default:"0" }}</span>
-            </div>
-
-            <div class="text-muted mt-2">
-              {% if is_manager %}
-                Submit draft applications to admin
-              {% else %}
-                Track your draft/submitted enrollments
-              {% endif %}
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card">
-          <div class="card-body">
-            <div class="subheader">Competition Registrations</div>
-            <div class="h1 mb-2">—</div>
-
-            <div class="kpi-badges">
-              <span class="badge bg-blue-lt">Draft: {{ comp_draft_count|default:"0" }}</span>
-              <span class="badge bg-yellow-lt">Unpaid: {{ comp_unpaid_count|default:"0" }}</span>
-              <span class="badge bg-green-lt">Paid: {{ comp_paid_count|default:"0" }}</span>
-            </div>
-
-            <div class="text-muted mt-2">Payments & approvals</div>
-          </div>
-        </a>
-      </div>
-
+    <!-- Total Students (SMALL) -->
+    <div class="col-12 col-md-6 col-lg-2">
+      <a href="{% url 'portal_student_list' %}" class="card text-decoration-none h-100 kpi-card kpi-compact">
+        <div class="card-body">
+          <div class="subheader">Total Students</div>
+          <div class="h1 mb-0">{{ total_students }}</div>
+          <div class="text-muted mt-2">Students in your school database</div>
+        </div>
+      </a>
     </div>
+
+    <!-- Open Competitions (SMALL) -->
+    <div class="col-12 col-md-6 col-lg-2">
+      <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card kpi-compact">
+        <div class="card-body">
+          <div class="subheader">Open Competitions</div>
+          <div class="h1 mb-0">{{ open_events|length }}</div>
+          <div class="text-muted mt-2">Available competitions</div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Registration Status (WIDE) -->
+    <div class="col-12 col-lg-4">
+      <a href="{% if is_manager %}{% url 'portal_course_submission_inbox' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
+         class="card text-decoration-none h-100 kpi-card kpi-wide">
+        <div class="card-body">
+          <div class="subheader">
+            {% if is_manager %}Submission Inbox{% else %}Registration Status{% endif %}
+          </div>
+
+          <div class="h1 mb-2">{{ course_total|default:"—" }}</div>
+
+          <div class="kpi-badges kpi-badges-oneline">
+            <span class="badge bg-blue-lt">Draft: {{ course_draft_count|default:"0" }}</span>
+            <span class="badge bg-yellow-lt">Submitted: {{ course_submitted_count|default:"0" }}</span>
+            <span class="badge bg-green-lt">Accepted: {{ course_accepted_count|default:"0" }}</span>
+          </div>
+
+          <div class="text-muted mt-2">
+            {% if is_manager %}Submit draft applications to admin{% else %}Track your draft/submitted enrollments{% endif %}
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Competition Registrations (WIDE) -->
+    <div class="col-12 col-lg-4">
+      <a href="{% url 'portal_competition_register' %}" class="card text-decoration-none h-100 kpi-card kpi-wide">
+        <div class="card-body">
+          <div class="subheader">Competition Registrations</div>
+          <div class="h1 mb-2">—</div>
+
+          <div class="kpi-badges kpi-badges-oneline">
+            <span class="badge bg-blue-lt">Draft: {{ comp_draft_count|default:"0" }}</span>
+            <span class="badge bg-yellow-lt">Unpaid: {{ comp_unpaid_count|default:"0" }}</span>
+            <span class="badge bg-green-lt">Paid: {{ comp_paid_count|default:"0" }}</span>
+          </div>
+
+          <div class="text-muted mt-2">Payments & approvals</div>
+        </div>
+      </a>
+    </div>
+
   </div>
+</div>
 
   {# ✅ Recent Students #}
   <div class="col-12 mt-3">
