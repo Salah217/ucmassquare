@@ -89,6 +89,21 @@
 }
 
 /* ===== KPI Cards ===== */
+/* Make 3D KPIs behave like cards (same height + padding) */
+.kpi-3d-box{
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 14px;
+  background: #fff;
+  padding: 16px;
+  height: 100%;
+}
+
+.kpi-3d-hint{
+  margin-top: 10px;
+  font-size: .85rem;
+  color: #6c7a90;
+}
+
 .kpi-card{
   border-radius:14px;
   border:1px solid rgba(0,0,0,.06);
@@ -117,96 +132,106 @@
 
 <div class="row row-deck row-cards">
 
-<!-- ===== TOP AREA ===== -->
+<!-- ✅ TOP AREA (banner space reserved here only) -->
 <div class="col-12 dashboard-top">
 
-  <!-- Modules -->
+  <!-- MODULES -->
   <div class="row g-3">
-    <div class="col-md-4">
-      <a href="{% url 'portal_student_add' %}" class="card module-card module-green text-decoration-none">
+    <div class="col-12 col-lg-4">
+      <a href="{% url 'portal_student_add' %}" class="card module-card module-green text-decoration-none h-100">
         <div class="card-body">
           <span class="module-pill">MODULE</span>
-          <h3 class="mt-3">Register New Student</h3>
+          <h3 class="mt-3 mb-1">Register New Student</h3>
           <div class="text-muted">Add a student to your database</div>
         </div>
       </a>
     </div>
 
-    <div class="col-md-4">
-      <a href="{% url 'portal_course_register' %}" class="card module-card module-yellow text-decoration-none">
+    <div class="col-12 col-lg-4">
+      <a href="{% url 'portal_course_register' %}" class="card module-card module-yellow text-decoration-none h-100">
         <div class="card-body">
           <span class="module-pill">MODULE</span>
-          <h3 class="mt-3">Apply for a Course</h3>
+          <h3 class="mt-3 mb-1">Apply for a Course</h3>
           <div class="text-muted">Enroll eligible students</div>
         </div>
       </a>
     </div>
 
-    <div class="col-md-4">
-      <a href="{% url 'portal_competition_register' %}" class="card module-card module-blue text-decoration-none">
+    <div class="col-12 col-lg-4">
+      <a href="{% url 'portal_competition_register' %}" class="card module-card module-blue text-decoration-none h-100">
         <div class="card-body">
           <span class="module-pill">MODULE</span>
-          <h3 class="mt-3">Register Competition</h3>
+          <h3 class="mt-3 mb-1">Register Competition</h3>
           <div class="text-muted">Add students to competitions</div>
         </div>
       </a>
     </div>
   </div>
 
-  <!-- KPI Row -->
-  <div class="row g-3 mt-3">
+  <!-- KPI GRID (CLEAN ALIGNMENT) -->
+  <div class="row g-3 mt-3 align-items-stretch">
 
     <!-- 3D Student -->
-    <div class="col-lg-2 col-md-6">
-      <a href="{% url 'portal_student_list' %}" class="kpi-3d">
+    <div class="col-12 col-md-6 col-lg-2">
+      <a href="{% url 'portal_student_list' %}" class="kpi-3d kpi-3d-box">
         <div class="kpi-3d-label">Student No</div>
         <div class="kpi-3d-number">{{ total_students }}</div>
+        <div class="kpi-3d-hint">Total students</div>
       </a>
     </div>
 
     <!-- 3D Competition -->
-    <div class="col-lg-2 col-md-6">
-      <a href="{% url 'portal_competition_register' %}" class="kpi-3d">
+    <div class="col-12 col-md-6 col-lg-2">
+      <a href="{% url 'portal_competition_register' %}" class="kpi-3d kpi-3d-box">
         <div class="kpi-3d-label">Competition</div>
         <div class="kpi-3d-number">{{ open_events|length }}</div>
+        <div class="kpi-3d-hint">Open events</div>
       </a>
     </div>
 
     <!-- Registration Status -->
-    <div class="col-lg-4">
+    <div class="col-12 col-lg-4">
       <a href="{% if is_manager %}{% url 'portal_course_submission_inbox' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
          class="card kpi-card text-decoration-none h-100">
         <div class="card-body">
-          <div class="subheader">Registration Status</div>
-          <div class="h1">{{ course_total|default:"—" }}</div>
+          <div class="subheader">{% if is_manager %}Submission Inbox{% else %}Registration Status{% endif %}</div>
+          <div class="h1 mb-2">{{ course_total|default:"—" }}</div>
+
           <div class="kpi-badges">
-            <span class="badge bg-blue-lt">Draft {{ course_draft_count|default:"0" }}</span>
-            <span class="badge bg-yellow-lt">Submitted {{ course_submitted_count|default:"0" }}</span>
-            <span class="badge bg-green-lt">Accepted {{ course_accepted_count|default:"0" }}</span>
+            <span class="badge bg-blue-lt">Draft: {{ course_draft_count|default:"0" }}</span>
+            <span class="badge bg-yellow-lt">Submitted: {{ course_submitted_count|default:"0" }}</span>
+            <span class="badge bg-green-lt">Accepted: {{ course_accepted_count|default:"0" }}</span>
           </div>
-          <div class="text-muted mt-2">Track enrollments</div>
+
+          <div class="text-muted mt-2">
+            {% if is_manager %}Submit draft applications to admin{% else %}Track enrollments{% endif %}
+          </div>
         </div>
       </a>
     </div>
 
-    <!-- Competition Status -->
-    <div class="col-lg-4">
+    <!-- Competition Registrations -->
+    <div class="col-12 col-lg-4">
       <a href="{% url 'portal_competition_register' %}" class="card kpi-card text-decoration-none h-100">
         <div class="card-body">
           <div class="subheader">Competition Registrations</div>
-          <div class="h1">—</div>
+          <div class="h1 mb-2">—</div>
+
           <div class="kpi-badges">
-            <span class="badge bg-blue-lt">Draft {{ comp_draft_count|default:"0" }}</span>
-            <span class="badge bg-yellow-lt">Unpaid {{ comp_unpaid_count|default:"0" }}</span>
-            <span class="badge bg-green-lt">Paid {{ comp_paid_count|default:"0" }}</span>
+            <span class="badge bg-blue-lt">Draft: {{ comp_draft_count|default:"0" }}</span>
+            <span class="badge bg-yellow-lt">Unpaid: {{ comp_unpaid_count|default:"0" }}</span>
+            <span class="badge bg-green-lt">Paid: {{ comp_paid_count|default:"0" }}</span>
           </div>
+
           <div class="text-muted mt-2">Payments & approvals</div>
         </div>
       </a>
     </div>
 
   </div>
+
 </div>
+
 
 <!-- ===== Recent Students ===== -->
 <div class="col-12 mt-3">
