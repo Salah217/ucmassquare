@@ -6,7 +6,7 @@
 
 <style>
 /* =========================================================
-   DASHBOARD LAYOUT (2 columns: content + banner)
+   DASHBOARD LAYOUT (Left content + Right banner column)
    ========================================================= */
 .dashboard-top{
   display: grid;
@@ -16,7 +16,7 @@
   width: 100%;
 }
 
-/* Left area contains two rows */
+/* Left area: modules row + KPI row */
 .dashboard-left{
   display: grid;
   grid-template-rows: auto auto;
@@ -24,23 +24,25 @@
   min-width: 0;
 }
 
-/* Right area is banner (merged across rows) */
+/* Right area: banner floating top */
 .dashboard-right{
   min-width: 0;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  position: relative;
 }
 
-/* Banner styling */
+/* ✅ Banner: smaller by half + floats top-right of its column */
 .dashboard-banner{
-  width: 100%;
-  max-width: 320px;        /* adjust if needed */
+  width: 50%;              /* ✅ half size */
+  max-width: 180px;        /* safety */
   height: auto;
-  opacity: .9;
+  opacity: .95;
   filter: drop-shadow(0 10px 18px rgba(0,0,0,.12));
   pointer-events: none;
   border-radius: 14px;
+  position: sticky;        /* ✅ floats while scrolling within column */
+  top: 10px;
+  margin-left: auto;       /* push right */
+  display: block;
 }
 
 /* Row 1: modules = 3 equal columns */
@@ -51,21 +53,26 @@
   min-width: 0;
 }
 
-/* Row 2: KPI layout = 3 columns */
+/* Row 2: KPI layout = 4 columns (same row)
+   - Student small
+   - Competition small
+   - Registration Status (wide)
+   - Competition Registrations (wide)
+*/
 .kpi-row{
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr; /* 1/3 each */
+  grid-template-columns: .75fr .75fr 1.25fr 1.25fr; /* ✅ make 3D smaller, KPI bigger */
   gap: 16px;
   min-width: 0;
 }
 
-/* 3D number tiles */
+/* 3D number tiles (smaller) */
 .kpi-3d-tile{
   border: 1px solid rgba(0,0,0,.06);
   border-radius: 14px;
   background: #fff;
-  padding: 16px;
-  height: 170px;
+  padding: 12px;
+  height: 140px;                 /* ✅ smaller */
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -74,13 +81,13 @@
   min-width: 0;
 }
 .kpi-3d-label{
-  font-size:.75rem;
+  font-size:.70rem;
   letter-spacing:.12em;
   text-transform:uppercase;
   color:#6c7a90;
 }
 .kpi-3d-number{
-  font-size:3.2rem;
+  font-size:2.6rem;              /* ✅ smaller number */
   font-weight:900;
   color:#206bc4;
   line-height: 1;
@@ -92,33 +99,25 @@
     0 6px 12px rgba(32,107,196,.35);
 }
 .kpi-3d-hint{
-  margin-top: 8px;
-  font-size: .9rem;
+  margin-top: 6px;
+  font-size: .85rem;
   color: #6c7a90;
   text-align:center;
 }
 
-/* KPI cards column (stack 2 cards) */
-.kpi-cards-stack{
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: 16px;
-  min-width: 0;
-}
-
-/* KPI card base */
+/* KPI cards (same row) */
 .kpi-card{
   border-radius:14px;
   border:1px solid rgba(0,0,0,.06);
   background:#fff;
-  height: 170px;
+  height: 140px;                 /* ✅ align with 3D tiles */
   min-width: 0;
 }
 .kpi-card .card-body{
   height:100%;
   display:flex;
   flex-direction:column;
-  padding: 18px;
+  padding: 14px;
   min-width: 0;
 }
 .kpi-card .subheader{
@@ -126,10 +125,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 8px;
 }
 .kpi-card .h1{
   text-align:center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  font-size: 1.6rem;            /* smaller headline */
 }
 
 /* One-line badges */
@@ -161,37 +162,23 @@
 .module-yellow{background:rgba(245,159,0,.18);}
 .module-blue{background:rgba(32,107,196,.16);}
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
+/* Responsive */
 @media (max-width: 1200px){
   .dashboard-top{ grid-template-columns: 1fr; }
-  .dashboard-right{ order: -1; } /* banner on top on smaller screens */
   .modules-row{ grid-template-columns: 1fr; }
   .kpi-row{ grid-template-columns: 1fr; }
-  .kpi-cards-stack{ grid-template-rows: auto auto; }
   .kpi-card, .kpi-3d-tile{ height: auto; }
+  .dashboard-banner{ position: static; width: 60%; max-width: 220px; margin: 0 auto 10px; }
 }
 </style>
-
-<div class="page-header d-print-none mb-4">
-  <div class="row align-items-center g-2">
-    <div class="col">
-      <h2 class="page-title mb-1">Dashboard</h2>
-      <div class="text-muted mt-1">
-        Welcome, {{ request.user.username }}{% if org_name %} · {{ org_name }}{% endif %}
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ✅ TOP AREA: 2 columns (left content + right banner) -->
 <div class="dashboard-top">
 
-  <!-- LEFT COLUMN (2 rows) -->
+  <!-- LEFT COLUMN -->
   <div class="dashboard-left">
 
-    <!-- ROW 1: MODULES (3 equal) -->
+    <!-- ROW 1: MODULES -->
     <div class="modules-row">
       <a href="{% url 'portal_student_add' %}" class="card module-card module-green text-decoration-none">
         <div class="card-body">
@@ -218,67 +205,57 @@
       </a>
     </div>
 
-    <!-- ROW 2: KPI ROW -->
+    <!-- ROW 2: KPI (ALL IN ONE ROW) -->
     <div class="kpi-row">
 
-      <!-- 3D Student -->
       <a href="{% url 'portal_student_list' %}" class="kpi-3d-tile">
         <div class="kpi-3d-label">Student No</div>
         <div class="kpi-3d-number">{{ total_students }}</div>
         <div class="kpi-3d-hint">Total students</div>
       </a>
 
-      <!-- 3D Competition -->
       <a href="{% url 'portal_competition_register' %}" class="kpi-3d-tile">
         <div class="kpi-3d-label">Competition</div>
         <div class="kpi-3d-number">{{ open_events|length }}</div>
         <div class="kpi-3d-hint">Open events</div>
       </a>
 
-      <!-- KPI Cards stacked -->
-      <div class="kpi-cards-stack">
-
-        <!-- Registration Status -->
-        <a href="{% if is_manager %}{% url 'portal_course_submission_inbox' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
-           class="card kpi-card text-decoration-none">
-          <div class="card-body">
-            <div class="subheader">{% if is_manager %}Submission Inbox{% else %}Registration Status{% endif %}</div>
-            <div class="h1">{{ course_total|default:"—" }}</div>
-
-            <div class="kpi-badges">
-              <span class="badge bg-blue-lt">Draft: {{ course_draft_count|default:"0" }}</span>
-              <span class="badge bg-yellow-lt">Submitted: {{ course_submitted_count|default:"0" }}</span>
-              <span class="badge bg-green-lt">Accepted: {{ course_accepted_count|default:"0" }}</span>
-            </div>
+      <a href="{% if is_manager %}{% url 'portal_course_submission_inbox' %}{% else %}{% url 'portal_course_enrollment_list' %}{% endif %}"
+         class="card kpi-card text-decoration-none">
+        <div class="card-body">
+          <div class="subheader">{% if is_manager %}Submission Inbox{% else %}Registration Status{% endif %}</div>
+          <div class="h1">{{ course_total|default:"—" }}</div>
+          <div class="kpi-badges">
+            <span class="badge bg-blue-lt">Draft: {{ course_draft_count|default:"0" }}</span>
+            <span class="badge bg-yellow-lt">Submitted: {{ course_submitted_count|default:"0" }}</span>
+            <span class="badge bg-green-lt">Accepted: {{ course_accepted_count|default:"0" }}</span>
           </div>
-        </a>
+        </div>
+      </a>
 
-        <!-- Competition Registrations -->
-        <a href="{% url 'portal_competition_register' %}" class="card kpi-card text-decoration-none">
-          <div class="card-body">
-            <div class="subheader">Competition Registrations</div>
-            <div class="h1">—</div>
-
-            <div class="kpi-badges">
-              <span class="badge bg-blue-lt">Draft: {{ comp_draft_count|default:"0" }}</span>
-              <span class="badge bg-yellow-lt">Unpaid: {{ comp_unpaid_count|default:"0" }}</span>
-              <span class="badge bg-green-lt">Paid: {{ comp_paid_count|default:"0" }}</span>
-            </div>
+      <a href="{% url 'portal_competition_register' %}" class="card kpi-card text-decoration-none">
+        <div class="card-body">
+          <div class="subheader">Competition Registrations</div>
+          <div class="h1">—</div>
+          <div class="kpi-badges">
+            <span class="badge bg-blue-lt">Draft: {{ comp_draft_count|default:"0" }}</span>
+            <span class="badge bg-yellow-lt">Unpaid: {{ comp_unpaid_count|default:"0" }}</span>
+            <span class="badge bg-green-lt">Paid: {{ comp_paid_count|default:"0" }}</span>
           </div>
-        </a>
-
-      </div>
+        </div>
+      </a>
 
     </div>
 
   </div>
 
-  <!-- RIGHT COLUMN (merged area = banner) -->
+  <!-- RIGHT COLUMN (banner floats top) -->
   <div class="dashboard-right">
     <img src="{% static 'brand/ucmas_dashboard.png' %}" alt="UCMAS Banner" class="dashboard-banner">
   </div>
 
 </div>
+
 
 <!-- ✅ Recent Students -->
 <div class="card mt-4">
