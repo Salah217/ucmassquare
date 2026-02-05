@@ -41,7 +41,7 @@
   border-radius: 14px;
   position: sticky;        /* ✅ floats while scrolling within column */
   top: 10px;
-  margin-left: auto;       /* push right */
+  margin-left: 150px;       /* push right */
   display: block;
 }
 
@@ -171,6 +171,16 @@
   .dashboard-banner{ position: static; width: 60%; max-width: 220px; margin: 0 auto 10px; }
 }
 </style>
+<div class="page-header d-print-none mb-4">
+  <div class="row align-items-center g-2">
+    <div class="col">
+      <h2 class="page-title mb-1">Dashboard</h2>
+      <div class="text-muted mt-1">
+        Welcome, {{ request.user.username }}{% if org_name %} · {{ org_name }}{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ✅ TOP AREA: 2 columns (left content + right banner) -->
 <div class="dashboard-top">
