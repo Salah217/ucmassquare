@@ -11,6 +11,23 @@
 
     <style>
       /* Sidebar brand block */
+      /* ✅ FIX: keep sidebar fixed, prevent it from stealing width */
+.navbar-vertical{
+  flex: 0 0 260px;     /* fixed sidebar width */
+  width: 260px;
+  min-width: 260px;
+}
+/* ✅ FIX: main content must take the remaining space */
+.page-wrapper{
+  flex: 1 1 auto;
+  min-width: 0;        /* VERY IMPORTANT for flex layouts */
+}
+/* optional: prevent container from looking too narrow */
+.page-body .container-xl{
+  max-width: 1400px;   /* or remove if you want default */
+}
+
+
       .sidebar-brand {
         display: flex;
         align-items: center;

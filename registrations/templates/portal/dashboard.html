@@ -35,17 +35,20 @@
   min-width: 0 !important;
 }
 
+.dashboard-top{ position: relative; }   /* add this */
+
 .dashboard-banner{
-  position: fixed;
-  top: 88px;
-  right: 18px;
+  position: absolute;        /* ✅ was fixed */
+  top: 10px;
+  right: 10px;
   width: 170px;
   max-width: 19vw;
-  z-index: 2;
-  opacity: .40;
+  z-index: 1;
+  opacity: .35;
   pointer-events: none;
   filter: drop-shadow(0 10px 18px rgba(0,0,0,.10));
 }
+
 @media (max-width: 992px){
   .dashboard-banner{
     position: static;
@@ -56,9 +59,7 @@
     opacity: 1;
   }
 }
-@media (min-width: 992px){
-  .dashboard-top{ padding-right: 220px; }
-}
+
 
 /* ===== Modules ===== */
 .module-card{
