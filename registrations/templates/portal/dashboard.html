@@ -3,6 +3,7 @@
 {% block title %}Dashboard | UCMAS{% endblock %}
 
 {% block content %}
+<div class="dashboard-fullwidth">
 
 <!-- Floating banner -->
 <img src="{% static 'brand/ucmas_dashboard.png' %}" alt="UCMAS" class="dashboard-banner"/>
@@ -20,6 +21,20 @@
 
 <style>
 /* ===== Banner ===== */
+/* ✅ FORCE dashboard area to be full width even if layout uses flex/grid wrong */
+.dashboard-fullwidth{
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* If parent is flex-nowrap, this prevents shrink */
+.dashboard-fullwidth .row,
+.dashboard-fullwidth .col-12{
+  min-width: 0 !important;
+}
+
 .dashboard-banner{
   position: fixed;
   top: 88px;
@@ -291,4 +306,6 @@
   </div>
 
 </div>
+</div>
+
 {% endblock %}
